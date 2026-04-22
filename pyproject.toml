@@ -1,0 +1,66 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mscthesis"
+version = "1.0.0"
+description = "Codebase for the master's thesis of Andreas Stillits"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [
+  { name = "Andreas Stillits", email = "andreas.stillits@gmail.com" }
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8",
+  "ruff>=0.4",
+  "black>=24",
+  "mypy>=1.8",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+    
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["mscthesis*"]
+namespaces = false
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E", # code style (indentation, whitepspace, linebreaks, etc.)
+    "F", # correctness (undefined names, unused imports, etc.)
+    "I", # import sorting (alphabetical, type, first-party/third-party, etc.)
+    "B", # bugbear (potential bugs, e.g., bare except, etc.)
+    "UP", # update style (suggest newer syntax for target-version)
+    "SIM", # simplify (complex expressions, nested statements, etc.)
+    "EM", # exceptions (messsage style, etc.)
+    "PIE", # quality of life rules
+
+]
+fixable = ["ALL"] # what is ruff allowed to auto-fix
+ignore = ["EM101", "EM102", "E501", "F401"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["mscthesis"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.mypy]
+python_version = "3.12"
+strict = false
+
