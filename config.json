@@ -1,0 +1,13 @@
+{
+    "behavior": {
+        "storage_root": "/home/andreasstillits/coding/MasterThesis/.treasury",
+        "sample_id_digits": 7
+    },
+    "solver": {
+        "ksp_type": "cg",
+        "ksp_rtol": 1e-08,
+        "pc_type": "jacobi",
+        "quadrature_degree": 6,
+        "order": 1
+    }
+}
