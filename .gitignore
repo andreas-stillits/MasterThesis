@@ -2,3 +2,4 @@ tmp/
 .vscode/
 .treasury/
 **/*.egg-info/
+**/__pycache__/ 

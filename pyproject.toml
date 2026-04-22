@@ -12,7 +12,10 @@ license = { text = "MIT" }
 authors = [
   { name = "Andreas Stillits", email = "andreas.stillits@gmail.com" }
 ]
-dependencies = []
+dependencies = [
+    "argcomplete>=3.6.3",
+    "pydantic>=2.12.4"
+]
 
 [project.optional-dependencies]
 dev = [
@@ -21,6 +24,9 @@ dev = [
   "black>=24",
   "mypy>=1.8",
 ]
+
+[project.scripts]
+msc = "mscthesis.cli.main:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
