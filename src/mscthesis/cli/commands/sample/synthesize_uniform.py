@@ -5,6 +5,7 @@ import argparse
 from ....config import ProjectConfig, save_config
 from ....core.io import save_voxels
 from ....core.synthesis.uniform import generate_voxels_from_sample_id
+from ....core.visualization import visualize_voxels
 from ....ids import validate_sample_id
 from ....manifest import dump_manifest
 from ....paths import ProjectPaths
@@ -51,6 +52,9 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
         tool_version=config.meta.project_version,
     )
 
+    if args.show:
+        visualize_voxels(voxels)
+
     return
 
 
@@ -63,5 +67,11 @@ def add_parser(subparsers: argparse._SubParsersAction) -> None:
         "sample_id",
         type=str,
         help="Unique identifier for the generated sample",
+    )
+    parser.add_argument(
+        "-s",
+        "--show",
+        action="store_true",
+        help="Visualize the output",
     )
     parser.set_defaults(cmd=_cmd)

@@ -65,7 +65,7 @@ class TriangulationConfig(BaseModel):
     )
 
 
-class MeshingConfig(BaseModel):
+class MeshFieldConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     stomatal_aspect: float = 0.15
@@ -80,9 +80,16 @@ class MeshingConfig(BaseModel):
     inlet_min: float = 0.005
     inlet_dist_min: float = 0.04
     inlet_dist_max: float = 0.50
+    atol: float = 0.005
+
+
+class MeshingConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    mesh_field: MeshFieldConfig = MeshFieldConfig()
     boundary_margin: float = 0.05
     substomatal_margin: float = 0.05
-    atol: float = 0.01
+    atol: float = 0.005
 
 
 class ProjectConfig(BaseModel):

@@ -50,6 +50,12 @@ class TriangulationPaths(ProcessPaths):
         return self.root / "cad_model.brep"
 
 
+class MeshingPaths(ProcessPaths):
+    @path_field(kind="file")
+    def mesh(self) -> Path:
+        return self.root / "mesh.msh"
+
+
 class SamplePaths(PathsBase):
     def __init__(self, base: PathLike, sample_id: str) -> None:
         super().__init__(base)
@@ -68,6 +74,11 @@ class SamplePaths(PathsBase):
     def triangulation(self) -> TriangulationPaths:
         self.root.ensure()
         return TriangulationPaths(self.root.path, "triangulation")
+
+    @child_paths
+    def meshing(self) -> MeshingPaths:
+        self.root.ensure()
+        return MeshingPaths(self.root.path, "meshing")
 
 
 class ProjectPaths(PathsBase):

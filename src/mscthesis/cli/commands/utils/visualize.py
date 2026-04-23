@@ -5,7 +5,11 @@ from pathlib import Path
 
 from ....config import ProjectConfig
 from ....core.io import load_surface_mesh, load_voxels
-from ....core.visualization import visualize_surface_mesh, visualize_voxels
+from ....core.visualization import (
+    visualize_surface_mesh,
+    visualize_volumetric_mesh,
+    visualize_voxels,
+)
 from ....ids import validate_sample_id
 from ....paths import ProjectPaths
 
@@ -25,6 +29,9 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
             path = paths.sample(sample_id).triangulation.mesh.require()
             mesh = load_surface_mesh(path)
             visualize_surface_mesh(mesh)
+        elif name == "mesh":
+            path = paths.sample(sample_id).meshing.mesh.require()
+            visualize_volumetric_mesh(path)
         else:
             raise ValueError(f"Unsupported object name: {name}")
     else:
@@ -47,6 +54,8 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
         elif path.suffix == ".stl":
             mesh = load_surface_mesh(path)
             visualize_surface_mesh(mesh)
+        elif path.suffix == ".msh":
+            visualize_volumetric_mesh(path)
         else:
             print(f"Unsupported file type: {path.suffix}")
 

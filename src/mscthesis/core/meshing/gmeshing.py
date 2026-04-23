@@ -46,8 +46,8 @@ def _get_bbox(entity: list[tuple[int, int]]) -> tuple[np.ndarray, np.ndarray]:
 def _scale_and_center(
     entity: list[tuple[int, int]],
     max_iterations: int = 5,
-    tolerance: float = 1e-6,
     target_size: float = 1.0,
+    tolerance: float = 1e-3,
 ) -> int:
     """
     Iteratively apply an affine transformation to an entity until the error is below the tolerance
@@ -99,6 +99,38 @@ def _scale_and_center(
     return count
 
 
+# debugging helper
+def _summary():
+    print("GMSH STATE:")
+    print("VOLUMES:")
+    for vol in kernel.getEntities(dim=3):
+        print(vol, f"Mass: {kernel.getMass(*vol):.3f}")
+
+    print("num_volumes:", len(kernel.getEntities(dim=3)))
+    print("num_surfaces:", len(kernel.getEntities(dim=2)))
+    print("num_curves:", len(kernel.getEntities(dim=1)))
+    # print("SURFACES:")
+    # for surf in kernel.getEntities(dim=2):
+    #     print(surf, f"Mass: {kernel.getMass(*surf):.3f}")
+    # print("CURVES:")
+    # for curve in kernel.getEntities(dim=1):
+    #     print(curve, f"Length: {kernel.getMass(*curve):.3f}")
+    print("END", "\n")
+
+
+def _assert(count3d: int, count2d: int, count1d: int) -> None:
+    """Assert that a model contains a certain number of volumes, surfaces and curves"""
+    num_volumes = len(kernel.getEntities(dim=3))
+    num_surfaces = len(kernel.getEntities(dim=2))
+    num_curves = len(kernel.getEntities(dim=1))
+    assert num_volumes == count3d, f"Expected {count3d} volumes but found {num_volumes}"
+    assert (
+        num_surfaces == count2d
+    ), f"Expected {count2d} surfaces but found {num_surfaces}"
+    assert num_curves == count1d, f"Expected {count1d} curves but found {num_curves}"
+    return
+
+
 @dataclass
 class Tags:
     AIRSPACE: int = 1
@@ -110,46 +142,126 @@ class Tags:
     MESOPHYLL: int = 7
 
 
-def _summary():
-    print("GMSH STATE:")
-    print("VOLUMES:")
-    for vol in kernel.getEntities(dim=3):
-        print(vol, f"Mass: {kernel.getMass(*vol):.3f}")
-    print("SURFACES:")
-    for surf in kernel.getEntities(dim=2):
-        print(surf, f"Mass: {kernel.getMass(*surf):.3f}")
-    print("CURVES:")
-    for curve in kernel.getEntities(dim=1):
-        print(curve, f"Length: {kernel.getMass(*curve):.3f}")
-    print("END", "\n")
-
-
 @log_call()
 def build_pipe_model(
     plug_aspect: float,
-) -> int:
+) -> tuple[int, float]:
     # INITIALIZATION
     _silent_initialize()
     gmsh.option.setNumber("Geometry.OCCBoundsUseStl", 1)
-    gmsh.model.add("Leaf Plug Model")
+    gmsh.model.add("Pipe Model")
 
     # MAKE CYLINDER
     bottom_surface = (0, 0, 0)
     axis = (0, 0, 1)
-    airspace_tag = kernel.addCylinder(*bottom_surface, *axis, plug_aspect)
+    airspace_tag: int = kernel.addCylinder(*bottom_surface, *axis, plug_aspect)
     kernel.synchronize()
-    return airspace_tag
+    _assert(1, 3, 3)
+
+    center, size = _get_bbox([(3, airspace_tag)])
+    plug_aspect = float(size[0] + size[1]) / 4
+
+    return airspace_tag, plug_aspect
 
 
 @log_call()
 def build_sample_model(
     cadmodel_path: str | Path,
-) -> int:
-    raise NotImplementedError
+    boundary_margin: float,
+    substomatal_margin: float,
+    atol: float,
+) -> tuple[int, float]:
+    # INITIALIZATION
+    _silent_initialize()
+    gmsh.option.setNumber("Geometry.OCCBoundsUseStl", 1)
+    gmsh.model.add("Leaf Plug Model")
+
+    # IMPORT CAD MODEL
+    cellspace: list[tuple[int, int]] = kernel.importShapes(str(cadmodel_path))
+    kernel.synchronize()
+    assert len(cellspace) == 1, "Expected exactly one entity from CAD import"
+    num_volumes_origin = len(kernel.getEntities(dim=3))
+    num_surfaces_origin = len(kernel.getEntities(dim=2))
+    num_curves_origin = len(kernel.getEntities(dim=1))
+
+    # SHIFT TO CENTER AT ORIGIN
+    center, size = _get_bbox(cellspace)
+    kernel.translate(cellspace, -center[0], -center[1], -center[2])
+    kernel.synchronize()
+
+    # EXTRACT MAX XY DISTANCE FOR CYLINDER DIMENSIONS
+    gmsh.model.mesh.generate(2)  # build surface mesh to populate node coordinates
+    _, node_coords, _ = gmsh.model.mesh.getNodes()
+    node_coords = np.array(node_coords).reshape(-1, 3)  # (num_nodes, 3)
+    distances = np.linalg.norm(
+        node_coords[:, :2], axis=1
+    )  # (num_nodes,) dist in xy plane
+    max_distance = np.max(distances)
+
+    # CALCULATE CYLINDER GEOMETRY
+    center, size = _get_bbox(cellspace)
+    bottom_z = center[2] - size[2] * (
+        0.5 + substomatal_margin
+    )  # z-coordinate of the bottom cylinder surface
+
+    height = size[2] * (1 + substomatal_margin + boundary_margin)
+
+    # determine the appropriate dimensions for the cylinder plug
+    bottom_surface = (center[0], center[1], bottom_z)
+    axis = (0, 0, height)
+    radius = (1 + boundary_margin) * max_distance
+
+    # create the cylinder plug
+    cylinder: list[tuple[int, int]] = [
+        (3, kernel.addCylinder(*bottom_surface, *axis, radius))
+    ]
+    kernel.synchronize()
+    _assert(
+        num_volumes_origin + 1,
+        num_surfaces_origin + 3,
+        num_curves_origin + 3,
+    )
+
+    # BOOLEAN CUT
+    volumes, _ = kernel.cut(cylinder, cellspace, removeObject=True, removeTool=True)
+    # volumes will include the airspace volume and the list of mesophyll cell volumes individually
+    # So we want len(volumes) == 1 + num_cells_placed for non-overlapping cells
+
+    # REMOVE ALL BUT THE LARGEST VOLUME (ASSUMED TO BE THE AIRSPACE)
+    largest_volume = 0
+    airspace_tag = -1
+
+    for dim, tag in volumes:
+        mass = kernel.getMass(dim, tag)
+        if mass > largest_volume:
+            largest_volume = mass
+            airspace_tag = tag
+    assert airspace_tag != -1, "Failed to identify airspace volume after boolean cut"
+    # remove all others
+    for dim, tag in volumes:
+        if tag != airspace_tag:
+            kernel.remove([(dim, tag)])
+
+    airspace = [(3, airspace_tag)]
+    kernel.synchronize()
+    _assert(
+        1,
+        num_surfaces_origin + 3,
+        num_curves_origin + 3,
+    )
+
+    # SCALE TO UNITY HEIGHT
+    _scale_and_center(airspace, target_size=1.0, tolerance=atol)
+
+    center, size = _get_bbox(airspace)
+    plug_aspect = float(size[0] + size[1]) / 4
+
+    return airspace_tag, plug_aspect
 
 
 @log_call()
 def mesh_model(
+    output_path: str | Path,
     airspace_tag: int,
     plug_aspect: float,
     stomatal_aspect: float,
@@ -167,16 +279,23 @@ def mesh_model(
     atol: float,
 ) -> None:
     # BASELINE
-    assert stomatal_aspect < plug_aspect, (
-        "Stomatal aspect ratio must be smaller than plug aspect ratio"
-    )
+    assert (
+        stomatal_aspect < plug_aspect
+    ), "Stomatal aspect ratio must be smaller than plug aspect ratio"
     volumes = kernel.getEntities(dim=3)
     assert len(volumes) == 1, "Expected exactly one volume in the model"
-    initial_surface_count = len(kernel.getEntities(dim=2))
+
+    num_surfaces_origin = len(kernel.getEntities(dim=2))
+    num_curves_origin = len(kernel.getEntities(dim=1))
 
     # MAKE INLET
     inlet_tag = kernel.addDisk(0, 0, 0, stomatal_aspect, stomatal_aspect)
     kernel.synchronize()
+    _assert(
+        1,
+        num_surfaces_origin + 1,
+        num_curves_origin + 1,
+    )
 
     # IDENTIFY BOTTOM SURFACE TAG
     surfaces = kernel.getEntities(dim=2)
@@ -192,26 +311,23 @@ def mesh_model(
     out_dimtags, _ = kernel.fragment([(3, airspace_tag)], [(2, inlet_tag)])
     kernel.synchronize()
 
-    # ASSERT ONLY (initial_surface_count + 1) SURFACES AND 1 VOLUME
-    assert len(kernel.getEntities(dim=2)) == initial_surface_count + 1, (
-        f"Expected {initial_surface_count + 1} surfaces after fragmentation"
+    airspace_tag = out_dimtags[0][
+        1
+    ]  # should be the same as airspace_tag but just to be sure we track it
+    _assert(
+        1,
+        num_surfaces_origin + 1,  # one new surface for the inlet disk
+        num_curves_origin + 1,  # one new curve for the inlet disk boundary
     )
-    volume = kernel.getEntities(dim=3)
-    assert len(volume) == 1, "Expected exactly one volume after fragmentation"
-
-    # _summary()
 
     # IDENTIFY SURFACES BY THEIR AREA (MASS)
     tags: dict[int, list[int] | int] = {}
-    tags[Tags.AIRSPACE] = volume[0][1]
+    tags[Tags.AIRSPACE] = airspace_tag
     plug_target = np.pi * plug_aspect**2
     inlet_target = np.pi * stomatal_aspect**2
     ring_target = plug_target - inlet_target
     curved_target = 2 * np.pi * plug_aspect * 1.0
 
-    # print(
-    #     f"plug_target: {plug_target:.3f}, inlet_target: {inlet_target:.3f}, ring_target: {ring_target:.3f}, curved_target: {curved_target:.3f}"
-    # )
     mesophyll_tags: list[int] = []
 
     def _isclose(x: float, y: float, atol: float = atol) -> bool:
@@ -233,9 +349,6 @@ def mesh_model(
     if len(mesophyll_tags) > 0:
         tags[Tags.MESOPHYLL] = mesophyll_tags
 
-    # print(json.dumps(tags, indent=4), "\n")
-    # _summary()
-
     # IDENTIFY INLET INTERFACE
     target_circumference = 2 * np.pi * stomatal_aspect
     inner_boundary = gmsh.model.getBoundary(
@@ -248,12 +361,12 @@ def mesh_model(
     outer_curves = {tag for dim, tag in outer_boundary if dim == 1}
 
     interface_curves = list(inner_curves.intersection(outer_curves))
-    assert len(interface_curves) == 1, (
-        "Expected exactly one curve at the inlet interface"
-    )
-    assert _isclose(kernel.getMass(1, interface_curves[0]), target_circumference), (
-        "Expected inner boundary to be target circle"
-    )
+    assert (
+        len(interface_curves) == 1
+    ), "Expected exactly one curve at the inlet interface"
+    assert _isclose(
+        kernel.getMass(1, interface_curves[0]), target_circumference
+    ), "Expected inner boundary to be target circle"
     tags[Tags.INLET_BOUNDARY] = interface_curves[0]
 
     # ASSIGN PHYSICAL GROUPS
@@ -264,7 +377,7 @@ def mesh_model(
     gmsh.model.addPhysicalGroup(2, [tags[Tags.INLET]], name="Inlet")
     gmsh.model.addPhysicalGroup(1, [tags[Tags.INLET_BOUNDARY]], name="InletBoundary")
     if Tags.MESOPHYLL in tags:
-        gmsh.model.addPhysicalGroup(2, [tags[Tags.MESOPHYLL]], name="MesophyllCells")
+        gmsh.model.addPhysicalGroup(2, tags[Tags.MESOPHYLL], name="MesophyllCells")
 
     # MESHING
     global_max_ = 2 * np.pi * plug_aspect / global_max_num * scale_factor
@@ -331,28 +444,6 @@ def mesh_model(
     # FINALIZE
     gmsh.model.mesh.generate(3)
 
-    gmsh.write("tmp/test.msh")
-    gmsh.fltk.run()
+    gmsh.write(str(output_path))
 
     gmsh.finalize()
-
-
-def main() -> int:
-    print("testing...")
-
-    config = ProjectConfig().meshing
-    config_dict = config.model_dump()
-    args = {}
-    for key, value in config_dict.items():
-        if key not in ["boundary_margin", "substomatal_margin"]:
-            args[key] = value
-
-    plug_aspect = 0.25
-    airspace_tag = build_pipe_model(plug_aspect)
-    mesh_model(airspace_tag, plug_aspect, **args)
-
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

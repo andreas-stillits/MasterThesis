@@ -5,6 +5,8 @@ import os
 import subprocess
 from typing import cast
 
+from mscthesis.core.visualization import visualize_surface_mesh
+
 from ....config import ProjectConfig, save_config
 from ....core.io import load_voxels, save_surface_mesh
 from ....core.meshing.triangulation import triangulate_voxels
@@ -90,6 +92,9 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
         tool_version=config.meta.project_version,
     )
 
+    if args.show:
+        visualize_surface_mesh(mesh)
+
     return
 
 
@@ -102,5 +107,11 @@ def add_parser(subparsers: argparse._SubParsersAction) -> None:
         "sample_id",
         type=str,
         help="Unique identifier for the generated sample",
+    )
+    parser.add_argument(
+        "-s",
+        "--show",
+        action="store_true",
+        help="Visualize the output",
     )
     parser.set_defaults(cmd=_cmd)
