@@ -52,3 +52,27 @@ def dump_manifest(
         json.dump(manifest, manifest_file, indent=2, default=str)
 
     return
+
+
+@log_call()
+def fetch_from_manifest(
+    manifest_path: Path, *keys: str, subdict: str = "meta"
+) -> dict[str, Any]:
+    """
+    Fetch and return the contents of a manifest JSON file.
+    Args:
+        manifest_path (Path): Path to the manifest file to read.
+        *keys (str): The keys to fetch from the manifest.
+        subdict (str): The subdictionary to fetch keys from (default is "meta").
+    Returns:
+        dict[str, Any]: The contents of the manifest file as a dictionary.
+    """
+    quantities: dict[str, Any] = {}
+    with open(manifest_path) as manifest_file:
+        manifest = json.load(manifest_file)
+        for key in keys:
+            if key in manifest[subdict]:
+                quantities[key] = manifest[subdict][key]
+            else:
+                raise KeyError(f"Key '{key}' not found in manifest {subdict}.")
+    return quantities
