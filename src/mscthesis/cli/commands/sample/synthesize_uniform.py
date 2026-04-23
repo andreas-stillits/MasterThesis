@@ -18,10 +18,9 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
         args.sample_id, required_digits=config.behavior.sample_id_digits
     )
     # prepare paths
-    paths = ProjectPaths(config.behavior.storage_root)
-    process_paths = paths.sample(sample_id).synthesis
+    paths = ProjectPaths(config.behavior.storage_root).sample(sample_id)
+    process_paths = paths.synthesis
     process_paths.root.ensure()
-    output_path = process_paths.voxels.path
 
     # do work
     voxels, metadata = generate_voxels_from_sample_id(
@@ -36,7 +35,7 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
     )
 
     # save data
-    save_voxels(output_path, voxels)
+    save_voxels(process_paths.voxels.path, voxels)
 
     # save config
     save_config(process_paths.config.path, config, "synthesis")
@@ -47,7 +46,7 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
         command_name="synthesize-uniform",
         sample_id=sample_id,
         inputs={},
-        outputs={"voxels": output_path},
+        outputs={"voxels": process_paths.voxels.path},
         metadata=metadata,
         tool_version=config.meta.project_version,
     )

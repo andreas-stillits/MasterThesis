@@ -45,8 +45,8 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
         process_paths.manifest.path,
         command_name="mesh",
         sample_id=sample_id,
-        inputs={"cad_model.brep": str(paths.triangulation.cadmodel.path)},
-        outputs={"mesh.msh": str(process_paths.mesh.path)},
+        inputs={"cadmodel": paths.triangulation.cadmodel.path},
+        outputs={"mesh": process_paths.mesh.path},
         metadata={
             "plug_aspect": plug_aspect,
             "stomatal_aspect": cmdconfig.mesh_field.stomatal_aspect,
