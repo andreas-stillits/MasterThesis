@@ -5,7 +5,7 @@ import time
 from pathlib import Path
 
 from ..config import ProjectConfig, build_project_config
-from ..paths import ProjectPaths
+from ..log import exit_program_log, setup_logging
 from .commands.utils import print_config
 
 try:
@@ -14,11 +14,8 @@ except ImportError:
     argcomplete = None
 
 
-def _build_parser() -> argparse.ArgumentParser:
-    """Build the argument parser for the CLI."""
-    parser = argparse.ArgumentParser(
-        prog="msc", description="Master Thesis Command Line Interface"
-    )
+def _wire_global_flags(parser: argparse.ArgumentParser) -> None:
+    """Add global flags to the parser."""
     parser.add_argument(
         "-c",
         "--config",
@@ -28,6 +25,26 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "-q", "--quiet", action="store_true", help="Suppress non-error output."
     )
+    parser.add_argument(
+        "--no-log",
+        action="store_true",
+        help="Disable logging to file. Logs will only be printed to console.",
+    )
+    parser.add_argument(
+        "--log-level",
+        type=str,
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help="Set the logging level. Default is INFO.",
+    )
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    """Build the argument parser for the CLI."""
+    parser = argparse.ArgumentParser(
+        prog="msc", description="Master Thesis Command Line Interface"
+    )
+    _wire_global_flags(parser)
     subparsers = parser.add_subparsers(dest="command", title="Commands", required=True)
     #
     # umbrella command for sample commands
@@ -78,6 +95,8 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
     config: ProjectConfig = build_project_config(args.config)
+    log_path: Path = config.behavior.storage_root / config.meta.log_name
+    setup_logging(log_path, args.log_level, args.quiet, args.no_log)
 
     if hasattr(args, "cmd"):
         start_time = time.perf_counter()

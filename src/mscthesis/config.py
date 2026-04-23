@@ -14,6 +14,7 @@ class MetaConfig(BaseModel):
     project_name: str = "mscthesis"
     project_version: str = "1.0.0"
     config_name: str = "config.json"
+    log_name: str = "run.log"
 
 
 class BehaviorConfig(BaseModel):
@@ -34,7 +35,6 @@ class SolverConfig(BaseModel):
 
 
 class ProjectConfig(BaseModel):
-
     meta: MetaConfig = MetaConfig()
     behavior: BehaviorConfig = BehaviorConfig()
     solver: SolverConfig = SolverConfig()
