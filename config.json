@@ -20,5 +20,37 @@
             "num_cells": 100,
             "radius": 0.08
         }
+    },
+    "triangulation": {
+        "smoothing_iterations": 5,
+        "elements_per_cell": 100,
+        "shrinkage_tolerance": 0.1,
+        "spacing": [
+            1.0,
+            1.0,
+            1.0
+        ],
+        "freecad_cmd": "freecadcmd-daily",
+        "freecad_script_path": "/home/andreasstillits/coding/master/src/mscthesis/core/meshing/breping.py"
+    },
+    "meshing": {
+        "mesh_field": {
+            "stomatal_aspect": 0.15,
+            "scale_factor": 2.0,
+            "global_max_num": 25,
+            "edge_min_num": 50,
+            "edge_dist_min": 0.04,
+            "edge_dist_max": 0.08,
+            "cell_min": 0.01,
+            "cell_dist_min": 0.01,
+            "cell_dist_max": 0.05,
+            "inlet_min": 0.005,
+            "inlet_dist_min": 0.04,
+            "inlet_dist_max": 0.5,
+            "atol": 0.005
+        },
+        "boundary_margin": 0.05,
+        "substomatal_margin": 0.05,
+        "atol": 0.005
     }
 }
