@@ -19,7 +19,10 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
             return
     else:
         print(f"Saving config to {target_path}...")
-    save_config(target_path, config, "behavior", "solver")
+
+    config_dict = config.model_dump()
+    keys = [key for key in config_dict if key != "meta"]
+    save_config(target_path, config, *keys)
     return
 
 

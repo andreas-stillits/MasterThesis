@@ -34,10 +34,29 @@ class SolverConfig(BaseModel):
     order: int = 2
 
 
+class SynthesizeUniformConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    num_cells: int = 100
+    radius: float = 0.08
+
+
+class SynthesisConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    base_seed: int = 123456
+    resolution: int = 100
+    plug_aspect: float = 0.25
+    separation: float = 0.01
+    max_attempts: int = 10_000
+    uniform: SynthesizeUniformConfig = SynthesizeUniformConfig()
+
+
 class ProjectConfig(BaseModel):
     meta: MetaConfig = MetaConfig()
     behavior: BehaviorConfig = BehaviorConfig()
     solver: SolverConfig = SolverConfig()
+    synthesis: SynthesisConfig = SynthesisConfig()
 
     def dump_json(self) -> str:
         return json.dumps(self.model_dump(), indent=4, default=str)
