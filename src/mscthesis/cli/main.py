@@ -6,8 +6,8 @@ from pathlib import Path
 
 from ..config import ProjectConfig, build_project_config
 from ..log import exit_program_log, setup_logging
-from .commands.sample import synthesize_uniform
-from .commands.utils import print_config
+from .commands.sample import synthesize_uniform, triangulate
+from .commands.utils import print_config, visualize
 
 try:
     import argcomplete
@@ -59,6 +59,7 @@ def _build_parser() -> argparse.ArgumentParser:
         # the envoked command is stored under args.sample_command
     )
     synthesize_uniform.add_parser(sample_subparsers)
+    triangulate.add_parser(sample_subparsers)
     #
     # umbrella command for ideal pipe commands
     pipe_parser = subparsers.add_parser(
@@ -82,6 +83,7 @@ def _build_parser() -> argparse.ArgumentParser:
         # the envoked command is stored under args.utils_command
     )
     print_config.add_parser(utils_subparsers)
+    visualize.add_parser(utils_subparsers)
 
     return parser
 

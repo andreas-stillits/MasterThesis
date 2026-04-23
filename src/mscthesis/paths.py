@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from pathlib import Path
 
 from stillib_paths import PathLike, PathsBase, child_paths, path_field
@@ -17,22 +16,38 @@ class PipePaths(PathsBase):
         return self.root / "meshes"
 
 
-class SynthesisPaths(PathsBase):
+class ProcessPaths(PathsBase):
+    def __init__(self, base: PathLike, name: str) -> None:
+        super().__init__(base)
+        self.name = name
+
     @path_field(kind="dir")
     def root(self) -> Path:
-        return self.base / "synthesis"
-
-    @path_field(kind="file")
-    def voxels(self) -> Path:
-        return self.base / "voxels.npy"
+        return self.base / self.name
 
     @path_field(kind="file")
     def config(self) -> Path:
-        return self.base / "config.json"
+        return self.root / "config.json"
 
     @path_field(kind="file")
     def manifest(self) -> Path:
-        return self.base / "manifest.json"
+        return self.root / "manifest.json"
+
+
+class SynthesisPaths(ProcessPaths):
+    @path_field(kind="file")
+    def voxels(self) -> Path:
+        return self.root / "voxels.npy"
+
+
+class TriangulationPaths(ProcessPaths):
+    @path_field(kind="file")
+    def mesh(self) -> Path:
+        return self.root / "mesh.stl"
+
+    @path_field(kind="file")
+    def cadmodel(self) -> Path:
+        return self.root / "cad_model.brep"
 
 
 class SamplePaths(PathsBase):
@@ -47,7 +62,12 @@ class SamplePaths(PathsBase):
     @child_paths
     def synthesis(self) -> SynthesisPaths:
         self.root.ensure()
-        return SynthesisPaths(self.root.path)
+        return SynthesisPaths(self.root.path, "synthesis")
+
+    @child_paths
+    def triangulation(self) -> TriangulationPaths:
+        self.root.ensure()
+        return TriangulationPaths(self.root.path, "triangulation")
 
 
 class ProjectPaths(PathsBase):

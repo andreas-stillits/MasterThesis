@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-from pathlib import Path
 
 from ....config import ProjectConfig, save_config
 from ....core.io import save_voxels

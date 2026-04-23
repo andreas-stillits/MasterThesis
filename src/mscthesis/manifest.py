@@ -57,7 +57,7 @@ def dump_manifest(
 @log_call()
 def fetch_from_manifest(
     manifest_path: Path, *keys: str, subdict: str = "meta"
-) -> dict[str, Any]:
+) -> list[Any] | Any:
     """
     Fetch and return the contents of a manifest JSON file.
     Args:
@@ -65,14 +65,15 @@ def fetch_from_manifest(
         *keys (str): The keys to fetch from the manifest.
         subdict (str): The subdictionary to fetch keys from (default is "meta").
     Returns:
-        dict[str, Any]: The contents of the manifest file as a dictionary.
+        list[Any] | Any: The contents of the manifest file for keys.
+        If one key only, returns the value directly, otherwise a list of values in the order of keys.
     """
-    quantities: dict[str, Any] = {}
+    quantities: list[Any] = []
     with open(manifest_path) as manifest_file:
         manifest = json.load(manifest_file)
         for key in keys:
             if key in manifest[subdict]:
-                quantities[key] = manifest[subdict][key]
+                quantities.append(manifest[subdict][key])
             else:
                 raise KeyError(f"Key '{key}' not found in manifest {subdict}.")
-    return quantities
+    return quantities if len(quantities) > 1 else quantities[0] if quantities else None

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, ClassVar, Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel
 from pydantic.config import ConfigDict
@@ -52,14 +52,33 @@ class SynthesisConfig(BaseModel):
     uniform: SynthesizeUniformConfig = SynthesizeUniformConfig()
 
 
+class TriangulationConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    smoothing_iterations: int = 5
+    elements_per_cell: int = 100
+    shrinkage_tolerance: float = 0.10
+    spacing: tuple[float, float, float] = (1.0, 1.0, 1.0)
+    freecad_cmd: str = "freecadcmd-daily"
+    freecad_script_path: str = (
+        "/home/andreasstillits/coding/master/src/mscthesis/core/meshing/breping.py"
+    )
+
+
 class ProjectConfig(BaseModel):
     meta: MetaConfig = MetaConfig()
     behavior: BehaviorConfig = BehaviorConfig()
     solver: SolverConfig = SolverConfig()
     synthesis: SynthesisConfig = SynthesisConfig()
+    triangulation: TriangulationConfig = TriangulationConfig()
 
     def dump_json(self) -> str:
         return json.dumps(self.model_dump(), indent=4, default=str)
+
+
+# ================================================================================
+#                                       HELPERS
+# ================================================================================
 
 
 def filter_config(config: ProjectConfig, *keys: str) -> dict[str, Any]:
