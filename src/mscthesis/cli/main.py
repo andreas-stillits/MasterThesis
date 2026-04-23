@@ -6,6 +6,7 @@ from pathlib import Path
 
 from ..config import ProjectConfig, build_project_config
 from ..paths import ProjectPaths
+from .commands.utils import print_config
 
 try:
     import argcomplete
@@ -27,25 +28,42 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "-q", "--quiet", action="store_true", help="Suppress non-error output."
     )
-    # subparsers = parser.add_subparsers(dest="command", title="Commands", required=True)
-    # #
-    # # umbrella command for sample commands
-    # sample_parser = subparsers.add_parser(
-    #     "sample", help="Commands acting on sample geometries"
-    # )
-    # sample_subparsers = sample_parser.add_subparsers(
-    #     dest="sample_command", title="Sample Commands", required=True
-    # )
-    # # the envoked command is stored under args.sample_command
-    # #
-    # # umbrella command for ideal pipe commands
-    # pipe_parser = subparsers.add_parser(
-    #     "pipe", help="Commands acting on ideal pipe geometries"
-    # )
-    # pipe_subparsers = pipe_parser.add_subparsers(
-    #     dest="pipe_command", title="Pipe Commands", required=True
-    # )
-    # # the envoked command is stored under args.pipe_command
+    subparsers = parser.add_subparsers(dest="command", title="Commands", required=True)
+    #
+    # umbrella command for sample commands
+    sample_parser = subparsers.add_parser(
+        "sample", help="Commands acting on sample geometries"
+    )
+    sample_subparsers = sample_parser.add_subparsers(
+        dest="sample_command",
+        title="Sample Commands",
+        required=True,
+        # the envoked command is stored under args.sample_command
+    )
+    #
+    # umbrella command for ideal pipe commands
+    pipe_parser = subparsers.add_parser(
+        "pipe", help="Commands acting on ideal pipe geometries"
+    )
+    pipe_subparsers = pipe_parser.add_subparsers(
+        dest="pipe_command",
+        title="Pipe Commands",
+        required=True,
+        # the envoked command is stored under args.pipe_command
+    )
+    #
+    # utility commands
+    utils_parser = subparsers.add_parser(
+        "utils", help="Utility commands for project maintenance and debugging"
+    )
+    utils_subparsers = utils_parser.add_subparsers(
+        dest="utils_command",
+        title="Utility Commands",
+        required=True,
+        # the envoked command is stored under args.utils_command
+    )
+    print_config.add_parser(utils_subparsers)
+
     return parser
 
 
@@ -60,21 +78,22 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
     config: ProjectConfig = build_project_config(args.config)
-    paths: ProjectPaths = ProjectPaths(config.behavior.storage_root)
-    paths.sample("00012").synthesis.ensure()  # example of how to use paths
-    paths.pipes.meshes.ensure()  # example of how to use paths
 
-    # if hasattr(args, "cmd"):
-    #     start_time = time.perf_counter()
+    if hasattr(args, "cmd"):
+        start_time = time.perf_counter()
 
-    #     args.cmd(config, args)
+        args.cmd(config, args)
 
-    #     duration = time.perf_counter() - start_time
+        duration = time.perf_counter() - start_time
 
-    #     if not args.quiet:
-    #         print(f"Command '{args.cmd.__name__}' completed in {duration:.3f} seconds.")
+        if not args.quiet:
+            cmdname = args.command
+            if args.command in ["sample", "pipe", "utils"]:
+                cmdname = f"{args.command} {getattr(args, f'{args.command}_command')}"
+            print(f"Command: '{cmdname}' completed in {duration:.2f} seconds.")
 
-    return 0
+        return 0
+    return 1
 
 
 if __name__ == "__main__":
