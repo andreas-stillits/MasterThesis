@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+import json
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, cast
+from typing import Any, cast
 
 import gmsh
 import numpy as np
 
-from ...utilities.log import log_call
+from mscthesis.config import ProjectConfig
+
+from ...log import log_call
 
 # set namespace
 kernel = gmsh.model.occ
@@ -21,55 +25,6 @@ def _silent_initialize(*args, **kwargs) -> None:
     _original_initialize(*args, **kwargs)
     gmsh.option.setNumber("General.Terminal", 0)
     gmsh.option.setNumber("General.Verbosity", 0)
-
-
-def _metadata(
-    plug_aspect: float,
-    mesophyll_area: float,
-) -> dict[str, Any]:
-    """Collect relevant metadata from the meshing process to be stored with the command execution record"""
-    plug_area = np.pi * plug_aspect**2
-    mesophyll_area_fraction = mesophyll_area / plug_area
-
-    return {
-        "plug_aspect": plug_aspect,
-        "plug_area": plug_area,
-        "mesophyll_area": mesophyll_area,
-        "mesophyll_area_fraction": mesophyll_area_fraction,
-    }
-
-
-def _iterative_affine_transformation(
-    entity: list[tuple[int, int]],
-    transformation: Callable,
-    error: Callable,
-    max_iterations: int = 5,
-    tolerance: float = 1e-6,
-    target_size: float = 1.0,
-) -> int:
-    """
-    Iteratively apply an affine transformation to an entity until the error is below the tolerance
-    Args:
-        entity (list[tuple[int, int]]): [(dim, tag)]
-        transformation (Callable): function that takes center, size, target_size and returns a 4x4 affine transformation matrix
-        error (Callable): function that takes center, size, target_size and returns the error
-        max_iterations (int): maximum number of iterations
-        tolerance (float): error tolerance
-        target_size (float): desired size after transformation
-    Returns:
-        int: number of iterations performed
-    """
-    count = 0
-    for _ in range(max_iterations):
-        center, size = _get_bbox(entity)
-        current_error = abs(error(center, size, target_size))
-        if current_error < tolerance:
-            break
-        transform = transformation(center, size, target_size)
-        kernel.affineTransform(entity, transform)
-        kernel.synchronize()
-        count += 1
-    return count
 
 
 def _get_bbox(entity: list[tuple[int, int]]) -> tuple[np.ndarray, np.ndarray]:
@@ -88,84 +43,26 @@ def _get_bbox(entity: list[tuple[int, int]]) -> tuple[np.ndarray, np.ndarray]:
     return bbox_center, bbox_size
 
 
-@log_call()
-def build_gmsh_model(
-    entities: list[tuple[int, int]],
-    boundary_margin_fraction: float,
-    substomatal_cavity_margin_fraction: float,
-) -> list[tuple[int, int]]:
+def _scale_and_center(
+    entity: list[tuple[int, int]],
+    max_iterations: int = 5,
+    tolerance: float = 1e-6,
+    target_size: float = 1.0,
+) -> int:
     """
-    Build the gmsh model from imported entities.
+    Iteratively apply an affine transformation to an entity until the error is below the tolerance
     Args:
-        entities (list[tuple[int, int]]): List of (dim, tag) tuples
-        boundary_margin_fraction (float): Margin fraction for minimal distance to plug boundary
-        substomatal_cavity_margin_fraction (float): Margin fraction for minimal distance to the stomatal surface
+        entity (list[tuple[int, int]]): [(dim, tag)]
+        max_iterations (int): maximum number of iterations
+        tolerance (float): error tolerance
+        target_size (float): desired size after transformation
     Returns:
-        list[tuple[int, int]]: List of (dim, tag) tuples representing the airspace entity
+        int: number of iterations performed
     """
-    # ====== Identify appropriate cylinder plug dimensions ======
 
-    # shift to center at origin
-    center, size = _get_bbox(entities)
-    kernel.translate(entities, -center[0], -center[1], -center[2])
-    kernel.synchronize()
-
-    # perform 2D meshing and extract the point furthest away from origin in xy-plane
-    gmsh.model.mesh.generate(2)
-    node_tags, node_coords, _ = gmsh.model.mesh.getNodes()
-    node_coords = np.array(node_coords).reshape(-1, 3)
-    distances = np.linalg.norm(node_coords[:, :2], axis=1)
-    max_distance = np.max(distances)
-
-    # calculate cylinder geometry
-    center, size = _get_bbox(entities)
-
-    bottom_z = center[2] - size[2] * (
-        0.5 + substomatal_cavity_margin_fraction
-    )  # z-coordinate of the bottom cylinder surface
-
-    height = size[2] * (
-        1 + substomatal_cavity_margin_fraction + boundary_margin_fraction
-    )
-
-    # determine the appropriate dimensions for the cylinder plug
-    bottom_surface = (center[0], center[1], bottom_z)
-    axis = (0, 0, height)
-    radius = (1 + boundary_margin_fraction) * max_distance
-
-    # create the cylinder plug
-    cylinder = [(3, kernel.addCylinder(*bottom_surface, *axis, radius))]
-    kernel.synchronize()
-
-    # perform boolean cut to create airspace
-    airspace, _ = kernel.cut(cylinder, entities, removeObject=True, removeTool=True)
-    kernel.synchronize()
-
-    # Retain only the largest volume as airspace
-    volumes = gmsh.model.getEntities(dim=3)
-    largest_volume = 0
-    largest_volume_tag = None
-    # identify largest volume
-    for dim, tag in volumes:
-        mass = kernel.getMass(dim, tag)
-        if mass > largest_volume:
-            largest_volume = mass
-            largest_volume_tag = tag
-    # remove all other volumes
-    for dim, tag in volumes:
-        if tag != largest_volume_tag:
-            kernel.remove(
-                [(dim, tag)]
-            )  # recurvsive=True will remove all lower dimensional entities shared at the boundary
-
-    kernel.synchronize()
-    largest_volume_tag = cast(int, largest_volume_tag)
-    airspace = [(3, largest_volume_tag)]
-
-    # Iteratively apply affine transformation to airspace to center bottom surface at origin and scale height to 1
     def _transformation(
-        center: tuple[float, float, float],
-        size: tuple[float, float, float],
+        center: np.ndarray,
+        size: np.ndarray,
         target_size: float,
     ) -> list[float]:
         """Generate affine transformation matrix to scale and translate entity"""
@@ -189,447 +86,273 @@ def build_gmsh_model(
             1,
         ]
 
-    def _error(
-        center: tuple[float, float, float],
-        size: tuple[float, float, float],
-        target_size: float,
-    ) -> float:
-        """Calculate relative error in height"""
-        return (size[2] - target_size) / target_size
-
-    _ = _iterative_affine_transformation(
-        airspace,
-        _transformation,
-        _error,
-        max_iterations=5,
-        tolerance=1e-6,
-        target_size=1.0,
-    )
-
-    return airspace
+    count = 0
+    for _ in range(max_iterations):
+        center, size = _get_bbox(entity)
+        current_error = abs(size[2] - target_size)
+        if current_error < tolerance:
+            break
+        transform = _transformation(center, size, target_size)
+        kernel.affineTransform(entity, transform)
+        kernel.synchronize()
+        count += 1
+    return count
 
 
-@log_call()
-def assign_physical_groups(
-    airspace: list[tuple[int, int]],
-    tolerance: float,
-) -> tuple[dict[str, Any], float, float]:
-    """
-    Assign physical groups: airspace volume, top surface, bottom surface, curved surface, mesophyll surfaces
-    Args:
-        airspace (list[tuple[int, int]]): List of (dim, tag) tuples representing the airspace entity
-        tolerance (float): Tolerance for relative difference from expected area when identifying curved face
-    Returns:
-        tuple[dict[str, list[int] | int], float, float]: Tuple containing dictionary with tags for physical groups, the plug aspect ratio, and the mesophyll surface area
-    """
-    # determine curved face tag
-    # OBS: this approach of identification by area only works if the curved area 2 pi r is unique up to tolerace
-    # However, top and bottom surfaces will always be distinctly caught by the COM z-coordinate check below
-    center, size = _get_bbox(airspace)
-    # calculate target curved area from cylinder dimensions (elliptical cross-section due to possible slight asymmetry in transform)
-    a = size[0] / 2
-    b = size[1] / 2
-    curved_area_target = np.pi * (
-        3 * (a + b) - np.sqrt((3 * a + b) * (a + 3 * b))
-    )  # approximation of ellipse circumference to account for slight transform assymetry
+@dataclass
+class Tags:
+    AIRSPACE: int = 1
+    TOP: int = 2
+    BOTTOM: int = 3
+    CURVED: int = 4
+    INLET: int = 5
+    INLET_BOUNDARY: int = 6
+    MESOPHYLL: int = 7
 
-    curved_area_found = []
-    curved_area_tag = None
-    top_area_tag = None
-    bottom_area_tag = None
 
-    def _iscurved(tag: int) -> bool:
-        area = kernel.getMass(2, tag)
-        trigger = abs(area / curved_area_target - 1) <= tolerance
-        if trigger:
-            curved_area_found.append(area)
-        return trigger
-
-    # airspace
-    gmsh.model.addPhysicalGroup(3, [tag for dim, tag in airspace], 1, name="airspace")
-
-    # ====== surfaces ======
-    # get all surfaces
-    surfaces = gmsh.model.getEntities(dim=2)
-
-    mesophyll_surface_tags = []
-    for dim, tag in surfaces:
-        com = gmsh.model.occ.getCenterOfMass(dim, tag)
-        if np.isclose(com[2], 1.0):
-            # top surface
-            gmsh.model.addPhysicalGroup(2, [tag], 2, name="top_surface")
-            top_area_tag = tag
-        elif np.isclose(com[2], 0.0):
-            # bottom surface
-            gmsh.model.addPhysicalGroup(2, [tag], 3, name="bottom_surface")
-            bottom_area_tag = tag
-        elif _iscurved(tag):
-            # curved surface of cylinder
-            gmsh.model.addPhysicalGroup(2, [tag], 4, name="curved_surface")
-            curved_area_tag = tag
-        else:
-            # other surfaces
-            mesophyll_surface_tags.append(tag)
-    gmsh.model.addPhysicalGroup(2, mesophyll_surface_tags, 5, name="mesophyll_surfaces")
-
-    assert (
-        len(curved_area_found) == 1
-    ), f"Error identifying curved face of cylinder. Found {len(curved_area_found)} curved faces with relative errors from target: {[area/curved_area_target - 1 for area in curved_area_found]}"
-
-    assert (
-        top_area_tag is not None and bottom_area_tag is not None
-    ), "Error identifying top or bottom surface of cylinder"
-
-    tags = {
-        "mesophyll_surface_tags": mesophyll_surface_tags,
-        "curved_area_tag": curved_area_tag,
-        "top_area_tag": top_area_tag,
-        "bottom_area_tag": bottom_area_tag,
-    }
-
-    plug_aspect = float((a + b) / 2)
-    mesophyll_area = 0
-    for tag in mesophyll_surface_tags:
-        mesophyll_area += kernel.getMass(2, tag)
-
-    return tags, plug_aspect, mesophyll_area
+def _summary():
+    print("GMSH STATE:")
+    print("VOLUMES:")
+    for vol in kernel.getEntities(dim=3):
+        print(vol, f"Mass: {kernel.getMass(*vol):.3f}")
+    print("SURFACES:")
+    for surf in kernel.getEntities(dim=2):
+        print(surf, f"Mass: {kernel.getMass(*surf):.3f}")
+    print("CURVES:")
+    for curve in kernel.getEntities(dim=1):
+        print(curve, f"Length: {kernel.getMass(*curve):.3f}")
+    print("END", "\n")
 
 
 @log_call()
-def configure_meshfield(
-    tags: dict[str, Any],
+def build_pipe_model(
     plug_aspect: float,
-    global_resolution_factor: float,
-    min_stomatal_feature: float,
-    max_stomatal_feature: float,
-    min_cellular_feature: float,
-    max_stomatal_dist_factor: float,
-    min_cellular_dist_factor: float,
-    max_cellular_dist_factor: float,
-    min_boundary_dist_factor: float,
-    max_boundary_dist_factor: float,
-    min_points_boundary: int,
-    max_points_boundary: int,
-) -> None:
-    """
-    Configure the mesh size field in gmsh.
-    Args:
-        tags (dict[str, list[int] | int]): Dictionary containing tags for physical groups
-        plug_aspect (float): Aspect ratio of the plug (radius/height)
-        global_resolution_factor (float): Factor to adjust global resolution
-        min_stomatal_feature (float): Minimum feature size for stomata
-        max_stomatal_feature (float): Maximum feature size for stomata
-        min_cellular_feature (float): Minimum feature size for mesophyll cells
-        min_stomatal_dist_factor (float): Factor to adjust minimum distance for stomatal mesh
-        max_stomatal_dist_factor (float): Factor to adjust maximum distance for stomatal mesh
-        min_cellular_dist_factor (float): Factor to adjust minimum distance for cellular mesh
-        max_cellular_dist_factor (float): Factor to adjust maximum distance for cellular mesh
-        min_boundary_dist_factor (float): Factor to adjust minimum distance for boundary mesh
-        max_boundary_dist_factor (float): Factor to adjust maximum distance for boundary mesh
-        min_points_boundary (int): Minimum number of points on boundary
-        max_points_boundary (int): Maximum number of points on boundary
-    """
-    # Calculate resolution and distance parameters based on the provided factors and the size of the plug
-    min_stomatal_res = min_stomatal_feature * global_resolution_factor
-    min_cellular_res = min_cellular_feature * global_resolution_factor
-    min_boundary_res = (
-        2 * np.pi * plug_aspect / max_points_boundary * global_resolution_factor
-    )
-    max_global_res = (
-        2 * np.pi * plug_aspect / min_points_boundary * global_resolution_factor
-    )
-    #
-    max_stomatal_dist = max_stomatal_feature * max_stomatal_dist_factor
-    min_cellular_dist = min_cellular_feature * min_cellular_dist_factor
-    max_cellular_dist = min_cellular_feature * max_cellular_dist_factor
-    min_boundary_dist = (
-        min_boundary_res * min_boundary_dist_factor / global_resolution_factor
-    )
-    max_boundary_dist = (
-        min_boundary_res * max_boundary_dist_factor / global_resolution_factor
-    )
-    # add a distance field away from a point source at 0,0,0
-    point_tag = kernel.addPoint(0, 0, 0)
-    point_distance = field.add("Distance")
-    field.setNumbers(point_distance, "PointsList", [point_tag])
-    point_threshold = field.add("Threshold")
-    field.setNumber(point_threshold, "InField", point_distance)
-    field.setNumber(point_threshold, "LcMin", min_stomatal_res)
-    field.setNumber(point_threshold, "LcMax", max_global_res)
-    field.setNumber(point_threshold, "DistMin", max_stomatal_feature)
-    field.setNumber(point_threshold, "DistMax", max_stomatal_dist)
-
-    # # control distance to bottom inlet surface
-    # inlet_distance = field.add("Distance")
-    # field.setNumbers(inlet_distance, "FacesList", [tags["bottom_area_tag"]])
-    # inlet_threshold = field.add("Threshold")
-    # field.setNumber(inlet_threshold, "InField", inlet_distance)
-    # field.setNumber(inlet_threshold, "LcMin", min_stomatal_res)
-    # field.setNumber(inlet_threshold, "LcMax", max_global_res)
-    # field.setNumber(inlet_threshold, "DistMin", min_stomatal_dist)
-    # field.setNumber(inlet_threshold, "DistMax", max_stomatal_dist)
-    #
-    # control distance to mesophyll cell surfaces
-    mesophyll_distance = field.add("Distance")
-    field.setNumbers(mesophyll_distance, "FacesList", tags["mesophyll_surface_tags"])
-    mesophyll_threshold = field.add("Threshold")
-    field.setNumber(mesophyll_threshold, "InField", mesophyll_distance)
-    field.setNumber(mesophyll_threshold, "LcMin", min_cellular_res)
-    field.setNumber(mesophyll_threshold, "LcMax", max_global_res)
-    field.setNumber(mesophyll_threshold, "DistMin", min_cellular_dist)
-    field.setNumber(mesophyll_threshold, "DistMax", max_cellular_dist)
-    #
-    # control distance to plug boundary
-    boundary_distance = field.add("Distance")
-    field.setNumbers(
-        boundary_distance,
-        "FacesList",
-        [tags["curved_area_tag"], tags["top_area_tag"], tags["bottom_area_tag"]],
-    )
-    boundary_threshold = field.add("Threshold")
-    field.setNumber(boundary_threshold, "InField", boundary_distance)
-    field.setNumber(boundary_threshold, "LcMin", min_boundary_res)
-    field.setNumber(boundary_threshold, "LcMax", max_global_res)
-    field.setNumber(boundary_threshold, "DistMin", min_boundary_dist)
-    field.setNumber(boundary_threshold, "DistMax", max_boundary_dist)
-    #
-    minimum_field = field.add("Min")
-    field.setNumbers(
-        minimum_field,
-        "FieldsList",
-        [point_threshold, mesophyll_threshold, boundary_threshold],
-    )
-    field.setAsBackgroundMesh(minimum_field)
-    kernel.synchronize()
-    return
-
-
-@log_call()
-def run_gmsh_session(
-    brep_file: str | Path,
-    output_mesh_file: str | Path,
-    global_resolution_factor: float,
-    min_stomatal_feature: float,
-    max_stomatal_feature: float,
-    min_cellular_feature: float,
-    max_stomatal_dist_factor: float,
-    min_cellular_dist_factor: float,
-    max_cellular_dist_factor: float,
-    min_boundary_dist_factor: float,
-    max_boundary_dist_factor: float,
-    min_points_boundary: int,
-    max_points_boundary: int,
-    boundary_margin_fraction: float,
-    substomatal_cavity_margin_fraction: float,
-    tolerance: float,
-) -> dict[str, Any]:
-    """
-    Run the gmsh meshing session.
-    Args:
-        brep_file (str | Path): Path to the input BREP file.
-        output_mesh_file (str | Path): Path to the output mesh file.
-        global_resolution_factor (float): Factor to adjust global resolution.
-        cell_resolution_factor (float): Factor to adjust cell resolution.
-        minimum_stomatal_aspect (float): Minimum aspect ratio of the stomatal cavity to be resolved.
-        minimum_distance_factor (float): Factor to adjust minimum distance for mesh refinement.
-        maximum_distance_factor (float): Factor to adjust maximum distance for mesh refinement.
-        boundary_margin_fraction (float): Margin fraction for minimal distance to plug boundary.
-        substomatal_cavity_margin_fraction (float): Margin fraction for minimal distance to the stomatal surface.
-        tolerance (float): Tolerance for identifying curved face.
-    Returns:
-        dict[str, Any]: Metadata dictionary containing relevant information about the meshing process and the resulting mesh.
-    """
+) -> int:
+    # INITIALIZATION
     _silent_initialize()
     gmsh.option.setNumber("Geometry.OCCBoundsUseStl", 1)
     gmsh.model.add("Leaf Plug Model")
-    entities = kernel.importShapes(str(brep_file))
+
+    # MAKE CYLINDER
+    bottom_surface = (0, 0, 0)
+    axis = (0, 0, 1)
+    airspace_tag = kernel.addCylinder(*bottom_surface, *axis, plug_aspect)
     kernel.synchronize()
-
-    airspace = build_gmsh_model(
-        entities,
-        boundary_margin_fraction,
-        substomatal_cavity_margin_fraction,
-    )
-
-    tags, plug_aspect, mesophyll_area = assign_physical_groups(airspace, tolerance)
-
-    configure_meshfield(
-        tags,
-        plug_aspect,
-        global_resolution_factor,
-        min_stomatal_feature,
-        max_stomatal_feature,
-        min_cellular_feature,
-        max_stomatal_dist_factor,
-        min_cellular_dist_factor,
-        max_cellular_dist_factor,
-        min_boundary_dist_factor,
-        max_boundary_dist_factor,
-        min_points_boundary,
-        max_points_boundary,
-    )
-
-    gmsh.model.mesh.generate(3)
-    gmsh.write(str(output_mesh_file))
-
-    return _metadata(plug_aspect, mesophyll_area)
+    return airspace_tag
 
 
 @log_call()
-def build_cylinder_model(
-    output_mesh_file: str | Path,
+def build_sample_model(
+    cadmodel_path: str | Path,
+) -> int:
+    raise NotImplementedError
+
+
+@log_call()
+def mesh_model(
+    airspace_tag: int,
     plug_aspect: float,
-    global_resolution_factor: float,
-    min_stomatal_feature: float,
-    max_stomatal_feature: float,
-    max_stomatal_dist_factor: float,
-    min_boundary_dist_factor: float,
-    max_boundary_dist_factor: float,
-    min_points_boundary: int,
-    max_points_boundary: int,
-    tolerance: float,
-) -> dict[str, Any]:
-    """
-    Build a simple cylinder model in gmsh with the given aspect ratio.
-    Args:
-        output_mesh_file (str | Path): Path to the output mesh file
-        plug_aspect (float): Aspect ratio of the cylinder (radius/height)
-        global_resolution_factor (float): Factor for global mesh resolution
-        min_stomatal_feature (float): Minimum feature size for stomata
-        min_stomatal_dist_factor (float): Factor for minimum stomatal distance
-        max_stomatal_dist_factor (float): Factor for maximum stomatal distance
-        min_boundary_dist_factor (float): Factor for minimum boundary distance
-        max_boundary_dist_factor (float): Factor for maximum boundary distance
-        min_points_boundary (int): Minimum number of points on boundary
-        max_points_boundary (int): Maximum number of points on boundary
-        tolerance (float): Tolerance for surface identification
-    Returns:
-        dict[str, Any]: metadata
-    """
-    _silent_initialize()
-    gmsh.model.add("Ideal cylinder Model")
-    kernel.synchronize()
-    # construct cylinder
-    height = 1.0
-    radius = plug_aspect * height
-    bottom_surface = (0, 0, 0)
-    axis = (0, 0, height)
-    cylinder = [(3, kernel.addCylinder(*bottom_surface, *axis, radius))]
+    stomatal_aspect: float,
+    scale_factor: float,
+    global_max_num: int,
+    edge_min_num: int,
+    edge_dist_min: float,
+    edge_dist_max: float,
+    cell_min: float,
+    cell_dist_min: float,
+    cell_dist_max: float,
+    inlet_min: float,
+    inlet_dist_min: float,
+    inlet_dist_max: float,
+    atol: float,
+) -> None:
+    # BASELINE
+    assert stomatal_aspect < plug_aspect, (
+        "Stomatal aspect ratio must be smaller than plug aspect ratio"
+    )
+    volumes = kernel.getEntities(dim=3)
+    assert len(volumes) == 1, "Expected exactly one volume in the model"
+    initial_surface_count = len(kernel.getEntities(dim=2))
+
+    # MAKE INLET
+    inlet_tag = kernel.addDisk(0, 0, 0, stomatal_aspect, stomatal_aspect)
     kernel.synchronize()
 
-    # assign physical groups
-    # determine curved face tag
-    # OBS: this approach of identification by area only works if the curved area 2 pi r is unique up to tolerace
-    # However, top and bottom surfaces will always be distinctly caught by the COM z-coordinate check below
-    # calculate target curved area from cylinder dimensions
-    curved_area_target = 2 * np.pi * radius
-
-    curved_area_found = []
-    curved_area_tag = None
-    top_area_tag = None
-    bottom_area_tag = None
-
-    def _iscurved(tag: int) -> bool:
-        area = kernel.getMass(2, tag)
-        trigger = abs(area / curved_area_target - 1) <= tolerance
-        if trigger:
-            curved_area_found.append(area)
-        return trigger
-
-    # airspace
-    gmsh.model.addPhysicalGroup(3, [tag for dim, tag in cylinder], 1, name="airspace")
-
-    # ====== surfaces ======
-    # get all surfaces
-    surfaces = gmsh.model.getEntities(dim=2)
-
-    mesophyll_surface_tags = []
+    # IDENTIFY BOTTOM SURFACE TAG
+    surfaces = kernel.getEntities(dim=2)
+    bottom_tag: int = -1
     for dim, tag in surfaces:
-        com = gmsh.model.occ.getCenterOfMass(dim, tag)
-        if np.isclose(com[2], 1.0):
-            # top surface
-            gmsh.model.addPhysicalGroup(2, [tag], 2, name="top_surface")
-            top_area_tag = tag
-        elif np.isclose(com[2], 0.0):
-            # bottom surface
-            gmsh.model.addPhysicalGroup(2, [tag], 3, name="bottom_surface")
-            bottom_area_tag = tag
-        elif _iscurved(tag):
-            # curved surface of cylinder
-            gmsh.model.addPhysicalGroup(2, [tag], 4, name="curved_surface")
-            curved_area_tag = tag
-        else:
-            # other surfaces
-            mesophyll_surface_tags.append(tag)
+        com = kernel.getCenterOfMass(dim, tag)
+        if np.isclose(com[2], 0):
+            bottom_tag = tag
+            break
+    assert bottom_tag != -1, "Failed to identify bottom surface tag"
 
-    assert (
-        len(mesophyll_surface_tags) == 0
-    ), f"Error identifying surfaces. Found unexpected additional surfaces with tags: {mesophyll_surface_tags}"
-
-    assert (
-        len(curved_area_found) == 1
-    ), f"Error identifying curved face of cylinder. Found {len(curved_area_found)} curved faces with relative errors from target: {[area/curved_area_target - 1 for area in curved_area_found]}"
-
-    assert (
-        top_area_tag is not None and bottom_area_tag is not None
-    ), "Error identifying top or bottom surface of cylinder"
-
-    tags = {
-        "mesophyll_surface_tags": mesophyll_surface_tags,
-        "curved_area_tag": curved_area_tag,
-        "top_area_tag": top_area_tag,
-        "bottom_area_tag": bottom_area_tag,
-    }
+    # FRAGMENT SO MESH CONFORMS TO INLET INTERFACE
+    out_dimtags, _ = kernel.fragment([(3, airspace_tag)], [(2, inlet_tag)])
     kernel.synchronize()
 
-    # mesh and write to file
-    # Calculate resolution and distance parameters based on the provided factors and the size of the plug
-    min_stomatal_res = min_stomatal_feature * global_resolution_factor
-    min_boundary_res = (
-        2 * np.pi * plug_aspect / max_points_boundary * global_resolution_factor
+    # ASSERT ONLY (initial_surface_count + 1) SURFACES AND 1 VOLUME
+    assert len(kernel.getEntities(dim=2)) == initial_surface_count + 1, (
+        f"Expected {initial_surface_count + 1} surfaces after fragmentation"
     )
-    max_global_res = (
-        2 * np.pi * plug_aspect / min_points_boundary * global_resolution_factor
-    )
-    #
-    max_stomatal_dist = max_stomatal_feature * max_stomatal_dist_factor
-    min_boundary_dist = (
-        min_boundary_res * min_boundary_dist_factor / global_resolution_factor
-    )
-    max_boundary_dist = (
-        min_boundary_res * max_boundary_dist_factor / global_resolution_factor
-    )
+    volume = kernel.getEntities(dim=3)
+    assert len(volume) == 1, "Expected exactly one volume after fragmentation"
 
-    # control distance to bottom inlet surface
-    inlet_distance = field.add("Distance")
-    field.setNumbers(inlet_distance, "FacesList", [tags["bottom_area_tag"]])
-    inlet_threshold = field.add("Threshold")
-    field.setNumber(inlet_threshold, "InField", inlet_distance)
-    field.setNumber(inlet_threshold, "LcMin", min_stomatal_res)
-    field.setNumber(inlet_threshold, "LcMax", max_global_res)
-    field.setNumber(inlet_threshold, "DistMin", max_stomatal_feature)
-    field.setNumber(inlet_threshold, "DistMax", max_stomatal_dist)
-    #
-    # control distance to plug boundary
-    boundary_distance = field.add("Distance")
-    field.setNumbers(boundary_distance, "FacesList", [tags["curved_area_tag"]])
-    boundary_threshold = field.add("Threshold")
-    field.setNumber(boundary_threshold, "InField", boundary_distance)
-    field.setNumber(boundary_threshold, "LcMin", min_boundary_res)
-    field.setNumber(boundary_threshold, "LcMax", max_global_res)
-    field.setNumber(boundary_threshold, "DistMin", min_boundary_dist)
-    field.setNumber(boundary_threshold, "DistMax", max_boundary_dist)
-    #
+    # _summary()
+
+    # IDENTIFY SURFACES BY THEIR AREA (MASS)
+    tags: dict[int, list[int] | int] = {}
+    tags[Tags.AIRSPACE] = volume[0][1]
+    plug_target = np.pi * plug_aspect**2
+    inlet_target = np.pi * stomatal_aspect**2
+    ring_target = plug_target - inlet_target
+    curved_target = 2 * np.pi * plug_aspect * 1.0
+
+    # print(
+    #     f"plug_target: {plug_target:.3f}, inlet_target: {inlet_target:.3f}, ring_target: {ring_target:.3f}, curved_target: {curved_target:.3f}"
+    # )
+    mesophyll_tags: list[int] = []
+
+    def _isclose(x: float, y: float, atol: float = atol) -> bool:
+        return abs(x - y) < atol * y
+
+    for dim, tag in kernel.getEntities(dim=2):
+        com = kernel.getCenterOfMass(dim, tag)
+        mass = kernel.getMass(dim, tag)
+        if np.isclose(com[2], 1.0) and _isclose(mass, plug_target):
+            tags[Tags.TOP] = tag
+        elif np.isclose(com[2], 0.0) and _isclose(mass, inlet_target):
+            tags[Tags.INLET] = tag
+        elif np.isclose(com[2], 0.0) and _isclose(mass, ring_target):
+            tags[Tags.BOTTOM] = tag
+        elif _isclose(mass, curved_target):
+            tags[Tags.CURVED] = tag
+        else:
+            mesophyll_tags.append(tag)
+    if len(mesophyll_tags) > 0:
+        tags[Tags.MESOPHYLL] = mesophyll_tags
+
+    # print(json.dumps(tags, indent=4), "\n")
+    # _summary()
+
+    # IDENTIFY INLET INTERFACE
+    target_circumference = 2 * np.pi * stomatal_aspect
+    inner_boundary = gmsh.model.getBoundary(
+        [(2, tags[Tags.INLET])], oriented=False, recursive=False
+    )
+    outer_boundary = gmsh.model.getBoundary(
+        [(2, tags[Tags.BOTTOM])], oriented=False, recursive=False
+    )
+    inner_curves = {tag for dim, tag in inner_boundary if dim == 1}
+    outer_curves = {tag for dim, tag in outer_boundary if dim == 1}
+
+    interface_curves = list(inner_curves.intersection(outer_curves))
+    assert len(interface_curves) == 1, (
+        "Expected exactly one curve at the inlet interface"
+    )
+    assert _isclose(kernel.getMass(1, interface_curves[0]), target_circumference), (
+        "Expected inner boundary to be target circle"
+    )
+    tags[Tags.INLET_BOUNDARY] = interface_curves[0]
+
+    # ASSIGN PHYSICAL GROUPS
+    gmsh.model.addPhysicalGroup(3, [tags[Tags.AIRSPACE]], name="Airspace")
+    gmsh.model.addPhysicalGroup(2, [tags[Tags.TOP]], name="Top")
+    gmsh.model.addPhysicalGroup(2, [tags[Tags.BOTTOM]], name="Bottom")
+    gmsh.model.addPhysicalGroup(2, [tags[Tags.CURVED]], name="Curved")
+    gmsh.model.addPhysicalGroup(2, [tags[Tags.INLET]], name="Inlet")
+    gmsh.model.addPhysicalGroup(1, [tags[Tags.INLET_BOUNDARY]], name="InletBoundary")
+    if Tags.MESOPHYLL in tags:
+        gmsh.model.addPhysicalGroup(2, [tags[Tags.MESOPHYLL]], name="MesophyllCells")
+
+    # MESHING
+    global_max_ = 2 * np.pi * plug_aspect / global_max_num * scale_factor
+    edge_min_ = 2 * np.pi * plug_aspect / edge_min_num * scale_factor
+    cell_min_ = cell_min * scale_factor
+    inlet_min_ = inlet_min * scale_factor
+
+    field_list = []
+    gmsh.option.setNumber("Mesh.MeshSizeExtendFromBoundary", 0)
+
+    # add distance field away from the edge:
+    edge_distance = field.add("Distance")
+    field.setNumbers(
+        edge_distance,
+        "FacesList",
+        [tags[Tags.CURVED], tags[Tags.TOP], tags[Tags.BOTTOM], tags[Tags.INLET]],
+    )
+    edge_threshold = field.add("Threshold")
+    field.setNumber(edge_threshold, "InField", edge_distance)
+    field.setNumber(edge_threshold, "LcMin", edge_min_)
+    field.setNumber(edge_threshold, "LcMax", global_max_)
+    field.setNumber(edge_threshold, "DistMin", edge_dist_min)
+    field.setNumber(edge_threshold, "DistMax", edge_dist_max)
+    field_list.append(edge_threshold)
+
+    # add distance field away from the inlet boundary:
+    inlet_boundary_distance = field.add("Distance")
+    field.setNumbers(
+        inlet_boundary_distance,
+        "CurvesList",
+        [tags[Tags.INLET_BOUNDARY]],
+    )
+    field.setNumber(inlet_boundary_distance, "Sampling", 100)
+    inlet_boundary_threshold = field.add("Threshold")
+    field.setNumber(inlet_boundary_threshold, "InField", inlet_boundary_distance)
+    field.setNumber(inlet_boundary_threshold, "LcMin", inlet_min_)
+    field.setNumber(inlet_boundary_threshold, "LcMax", global_max_)
+    field.setNumber(inlet_boundary_threshold, "DistMin", inlet_dist_min)
+    field.setNumber(inlet_boundary_threshold, "DistMax", inlet_dist_max)
+    field_list.append(inlet_boundary_threshold)
+
+    # control distance to mesophyll cell surfaces
+    if Tags.MESOPHYLL in tags:
+        mesophyll_distance = field.add("Distance")
+        field.setNumbers(mesophyll_distance, "FacesList", tags[Tags.MESOPHYLL])
+        mesophyll_threshold = field.add("Threshold")
+        field.setNumber(mesophyll_threshold, "InField", mesophyll_distance)
+        field.setNumber(mesophyll_threshold, "LcMin", cell_min_)
+        field.setNumber(mesophyll_threshold, "LcMax", global_max_)
+        field.setNumber(mesophyll_threshold, "DistMin", cell_dist_min)
+        field.setNumber(mesophyll_threshold, "DistMax", cell_dist_max)
+        field_list.append(mesophyll_threshold)
+
+    # combine fields by taking the minimum at each point
     minimum_field = field.add("Min")
     field.setNumbers(
         minimum_field,
         "FieldsList",
-        [inlet_threshold, boundary_threshold],
+        field_list,
     )
     field.setAsBackgroundMesh(minimum_field)
     kernel.synchronize()
 
+    # FINALIZE
     gmsh.model.mesh.generate(3)
-    gmsh.write(str(output_mesh_file))
 
-    return {}
+    gmsh.write("tmp/test.msh")
+    gmsh.fltk.run()
+
+    gmsh.finalize()
+
+
+def main() -> int:
+    print("testing...")
+
+    config = ProjectConfig().meshing
+    config_dict = config.model_dump()
+    args = {}
+    for key, value in config_dict.items():
+        if key not in ["boundary_margin", "substomatal_margin"]:
+            args[key] = value
+
+    plug_aspect = 0.25
+    airspace_tag = build_pipe_model(plug_aspect)
+    mesh_model(airspace_tag, plug_aspect, **args)
+
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

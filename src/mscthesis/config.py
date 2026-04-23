@@ -65,12 +65,33 @@ class TriangulationConfig(BaseModel):
     )
 
 
+class MeshingConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    stomatal_aspect: float = 0.15
+    scale_factor: float = 2.0
+    global_max_num: int = 25
+    edge_min_num: int = 50
+    edge_dist_min: float = 0.04
+    edge_dist_max: float = 0.08
+    cell_min: float = 0.01
+    cell_dist_min: float = 0.01
+    cell_dist_max: float = 0.05
+    inlet_min: float = 0.005
+    inlet_dist_min: float = 0.04
+    inlet_dist_max: float = 0.50
+    boundary_margin: float = 0.05
+    substomatal_margin: float = 0.05
+    atol: float = 0.01
+
+
 class ProjectConfig(BaseModel):
     meta: MetaConfig = MetaConfig()
     behavior: BehaviorConfig = BehaviorConfig()
     solver: SolverConfig = SolverConfig()
     synthesis: SynthesisConfig = SynthesisConfig()
     triangulation: TriangulationConfig = TriangulationConfig()
+    meshing: MeshingConfig = MeshingConfig()
 
     def dump_json(self) -> str:
         return json.dumps(self.model_dump(), indent=4, default=str)
