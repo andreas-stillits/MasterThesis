@@ -27,9 +27,11 @@ class BehaviorConfig(BaseModel):
 class SolverConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    ksp_type: Literal["preonly", "cg"] = "cg"
-    ksp_rtol: float = 1e-8
-    pc_type: Literal["lu", "jacobi"] = "jacobi"
+    petsc_options: dict[str, str | float] = {
+        "ksp_type": "cg",
+        "ksp_rtol": 1e-8,
+        "pc_type": "jacobi",
+    }
     quadrature_degree: int = 4
     order: int = 2
 
@@ -92,6 +94,18 @@ class MeshingConfig(BaseModel):
     atol: float = 0.005
 
 
+class PhotoactiveSolveConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    parameters: tuple[float, ...] = (0.7, 1.0, 0.1)
+
+
+class DiffusionSolveConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    parameters: tuple[float, ...] = (0.7, 0.2)
+
+
 class ProjectConfig(BaseModel):
     meta: MetaConfig = MetaConfig()
     behavior: BehaviorConfig = BehaviorConfig()
@@ -99,6 +113,8 @@ class ProjectConfig(BaseModel):
     synthesis: SynthesisConfig = SynthesisConfig()
     triangulation: TriangulationConfig = TriangulationConfig()
     meshing: MeshingConfig = MeshingConfig()
+    solve_active: PhotoactiveSolveConfig = PhotoactiveSolveConfig()
+    solve_diffusion: DiffusionSolveConfig = DiffusionSolveConfig()
 
     def dump_json(self) -> str:
         return json.dumps(self.model_dump(), indent=4, default=str)

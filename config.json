@@ -4,22 +4,24 @@
         "sample_id_digits": 5
     },
     "solver": {
-        "ksp_type": "cg",
-        "ksp_rtol": 1e-08,
-        "pc_type": "jacobi",
+        "petsc_options": {
+            "ksp_type": "cg",
+            "ksp_rtol": 1e-08,
+            "pc_type": "jacobi"
+        },
         "quadrature_degree": 4,
         "order": 2
     },
     "synthesis": {
+        "uniform": {
+            "num_cells": 100,
+            "radius": 0.08
+        },
         "base_seed": 123456,
         "resolution": 100,
         "plug_aspect": 0.25,
         "separation": 0.01,
-        "max_attempts": 10000,
-        "uniform": {
-            "num_cells": 100,
-            "radius": 0.08
-        }
+        "max_attempts": 10000
     },
     "triangulation": {
         "smoothing_iterations": 5,
