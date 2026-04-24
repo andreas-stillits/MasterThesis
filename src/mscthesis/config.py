@@ -106,6 +106,29 @@ class DiffusionSolveConfig(BaseModel):
     parameters: tuple[float, ...] = (0.7, 0.2)
 
 
+class PipesMakeConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    plug_aspect_min: float = 0.10
+    plug_aspect_max: float = 0.50
+    plug_aspect_delta: float = 0.05
+    stomatal_aspect_min: float = 0.025
+    stomatal_aspect_delta: float = 0.025
+
+
+class PipesConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    make: PipesMakeConfig = PipesMakeConfig()
+    parameter_sets: tuple[tuple[float, float], ...] = (
+        (0.80, 0.20),
+        (0.80, 0.40),
+        (0.80, 0.60),
+        (0.60, 0.20),
+        (0.60, 0.40),
+    )
+
+
 class ProjectConfig(BaseModel):
     meta: MetaConfig = MetaConfig()
     behavior: BehaviorConfig = BehaviorConfig()
@@ -115,6 +138,7 @@ class ProjectConfig(BaseModel):
     meshing: MeshingConfig = MeshingConfig()
     solve_active: PhotoactiveSolveConfig = PhotoactiveSolveConfig()
     solve_diffusion: DiffusionSolveConfig = DiffusionSolveConfig()
+    pipes: PipesConfig = PipesConfig()
 
     def dump_json(self) -> str:
         return json.dumps(self.model_dump(), indent=4, default=str)

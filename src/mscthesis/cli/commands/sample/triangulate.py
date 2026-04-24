@@ -15,7 +15,7 @@ from ....paths import ProjectPaths
 
 
 def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
-    """Command function for the synthesize-uniform command."""
+    """Command function for the triangulate command."""
     cmdconfig = config.triangulation
     sample_id: str = validate_sample_id(
         args.sample_id, required_digits=config.behavior.sample_id_digits

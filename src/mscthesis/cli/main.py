@@ -6,6 +6,7 @@ from pathlib import Path
 
 from ..config import ProjectConfig, build_project_config
 from ..log import setup_logging
+from .commands.pipes import run as pipe_run
 from .commands.sample import (
     mesh,
     solve_active,
@@ -78,14 +79,15 @@ def _build_parser() -> argparse.ArgumentParser:
     # ================================================================================
     #
     pipe_parser = subparsers.add_parser(
-        "pipe", help="Commands acting on ideal pipe geometries"
+        "pipes", help="Commands acting on ideal pipe geometries"
     )
     pipe_subparsers = pipe_parser.add_subparsers(
-        dest="pipe_command",
-        title="Pipe Commands",
+        dest="pipes_command",
+        title="Pipes Commands",
         required=True,
         # the envoked command is stored under args.pipe_command
     )
+    pipe_run.add_parser(pipe_subparsers)
     #
     # ================================================================================
     # utility commands

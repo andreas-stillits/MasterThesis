@@ -172,7 +172,7 @@ class BaseSolver:
             "curved_flux_grad": curved_flux_grad,
             "top_flux_grad": top_flux_grad,
             "total_flux_grad": total_flux_grad,
-            "sub_stomatal_mean": substomatal_mean,
+            "substomatal_mean": substomatal_mean,
             "top_mean": top_mean,
             "mesophyll_mean": mesophyll_mean,
             "mesophyll_var": mesophyll_var,

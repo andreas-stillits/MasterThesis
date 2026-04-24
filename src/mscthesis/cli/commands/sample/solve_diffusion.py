@@ -7,7 +7,6 @@ from ....core.io import load_volumetric_mesh, save_fem_solution
 from ....core.solvers import (
     DiffusionSolver,
     MeshContext,
-    PhotoactiveSolver,
     SolverContext,
 )
 from ....core.visualization import visualize_fem_solution
@@ -17,7 +16,7 @@ from ....paths import ProjectPaths
 
 
 def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
-    """Command function for the mesh command."""
+    """Command function for the solve-diffusion command."""
     cmdconfig = config.solve_diffusion
     sample_id: str = validate_sample_id(
         args.sample_id, required_digits=config.behavior.sample_id_digits

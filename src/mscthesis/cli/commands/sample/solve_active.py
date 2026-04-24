@@ -12,7 +12,7 @@ from ....paths import ProjectPaths
 
 
 def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
-    """Command function for the mesh command."""
+    """Command function for the solve-active command."""
     cmdconfig = config.solve_active
     sample_id: str = validate_sample_id(
         args.sample_id, required_digits=config.behavior.sample_id_digits
