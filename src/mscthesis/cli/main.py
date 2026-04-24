@@ -6,7 +6,7 @@ from pathlib import Path
 
 from ..config import ProjectConfig, build_project_config
 from ..log import setup_logging
-from .commands.pipes import run as pipe_run
+from .commands.pipes import run as pipes_run
 from .commands.sample import (
     mesh,
     solve_active,
@@ -75,7 +75,7 @@ def _build_parser() -> argparse.ArgumentParser:
     solve_diffusion.add_parser(sample_subparsers)
     #
     # ================================================================================
-    # umbrella command for ideal pipe commands
+    # umbrella command for ideal pipes commands
     # ================================================================================
     #
     pipe_parser = subparsers.add_parser(
@@ -87,7 +87,7 @@ def _build_parser() -> argparse.ArgumentParser:
         required=True,
         # the envoked command is stored under args.pipe_command
     )
-    pipe_run.add_parser(pipe_subparsers)
+    pipes_run.add_parser(pipe_subparsers)
     #
     # ================================================================================
     # utility commands
