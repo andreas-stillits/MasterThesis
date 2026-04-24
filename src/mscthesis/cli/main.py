@@ -5,7 +5,7 @@ import time
 from pathlib import Path
 
 from ..config import ProjectConfig, build_project_config
-from ..log import exit_program_log, setup_logging
+from ..log import setup_logging
 from .commands.sample import mesh, synthesize_uniform, triangulate
 from .commands.utils import print_config, visualize
 
@@ -48,7 +48,10 @@ def _build_parser() -> argparse.ArgumentParser:
     _wire_global_flags(parser)
     subparsers = parser.add_subparsers(dest="command", title="Commands", required=True)
     #
+    # =================================================================================
     # umbrella command for sample commands
+    # =================================================================================
+    #
     sample_parser = subparsers.add_parser(
         "sample", help="Commands acting on sample geometries"
     )
@@ -62,7 +65,10 @@ def _build_parser() -> argparse.ArgumentParser:
     triangulate.add_parser(sample_subparsers)
     mesh.add_parser(sample_subparsers)
     #
+    # ================================================================================
     # umbrella command for ideal pipe commands
+    # ================================================================================
+    #
     pipe_parser = subparsers.add_parser(
         "pipe", help="Commands acting on ideal pipe geometries"
     )
@@ -73,7 +79,10 @@ def _build_parser() -> argparse.ArgumentParser:
         # the envoked command is stored under args.pipe_command
     )
     #
+    # ================================================================================
     # utility commands
+    # ================================================================================
+    #
     utils_parser = subparsers.add_parser(
         "utils", help="Utility commands for project maintenance and debugging"
     )

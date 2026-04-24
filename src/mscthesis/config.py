@@ -44,12 +44,12 @@ class SynthesizeUniformConfig(BaseModel):
 class SynthesisConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    uniform: SynthesizeUniformConfig = SynthesizeUniformConfig()
     base_seed: int = 123456
     resolution: int = 100
     plug_aspect: float = 0.25
     separation: float = 0.01
     max_attempts: int = 10_000
-    uniform: SynthesizeUniformConfig = SynthesizeUniformConfig()
 
 
 class TriangulationConfig(BaseModel):
