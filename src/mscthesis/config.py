@@ -24,18 +24,6 @@ class BehaviorConfig(BaseModel):
     sample_id_digits: int = 5
 
 
-class SolverConfig(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    petsc_options: dict[str, str | float] = {
-        "ksp_type": "cg",
-        "ksp_rtol": 1e-8,
-        "pc_type": "jacobi",
-    }
-    quadrature_degree: int = 4
-    order: int = 2
-
-
 class SynthesizeUniformConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -94,6 +82,18 @@ class MeshingConfig(BaseModel):
     atol: float = 0.005
 
 
+class SolverConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    petsc_options: dict[str, str | float] = {
+        "ksp_type": "cg",
+        "ksp_rtol": 1e-8,
+        "pc_type": "jacobi",
+    }
+    quadrature_degree: int = 4
+    order: int = 2
+
+
 class PhotoactiveSolveConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -109,7 +109,7 @@ class DiffusionSolveConfig(BaseModel):
 class ProjectConfig(BaseModel):
     meta: MetaConfig = MetaConfig()
     behavior: BehaviorConfig = BehaviorConfig()
-    solver: SolverConfig = SolverConfig()
+    solver_ctx: SolverConfig = SolverConfig()
     synthesis: SynthesisConfig = SynthesisConfig()
     triangulation: TriangulationConfig = TriangulationConfig()
     meshing: MeshingConfig = MeshingConfig()

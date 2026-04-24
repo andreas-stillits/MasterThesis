@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
@@ -27,13 +27,15 @@ class MeshContext:
         self.fdim = self.mesh.topology.dim - 1
 
 
-@dataclass(frozen=True)
+@dataclass
 class SolverContext:
-    petsc_options: dict[str, str | float] = {
-        "ksp_type": "cg",
-        "ksp_rtol": 1e-8,
-        "pc_type": "jacobi",
-    }
+    petsc_options: dict[str, str | float] = field(
+        default_factory=lambda: {
+            "ksp_type": "cg",
+            "ksp_rtol": 1e-8,
+            "pc_type": "jacobi",
+        }
+    )
     quadrature_degree: int = 4
     order: int = 2
 

@@ -3,8 +3,9 @@ from __future__ import annotations
 import argparse
 
 from ....config import ProjectConfig, save_config
-from ....core.meshing.gmeshing import build_sample_model, mesh_model
-from ....core.visualization import visualize_volumetric_mesh
+from ....core.io import load_volumetric_mesh, save_fem_solution
+from ....core.solvers import MeshContext, PhotoactiveSolver, SolverContext
+from ....core.visualization import visualize_fem_solution
 from ....ids import validate_sample_id
 from ....manifest import dump_manifest
 from ....paths import ProjectPaths
@@ -12,57 +13,55 @@ from ....paths import ProjectPaths
 
 def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
     """Command function for the mesh command."""
-    cmdconfig = config.meshing
+    cmdconfig = config.solve_active
     sample_id: str = validate_sample_id(
         args.sample_id, required_digits=config.behavior.sample_id_digits
     )
     # prepare paths
     paths = ProjectPaths(config.behavior.storage_root).sample(sample_id)
 
-    process_paths = paths.meshing
+    process_paths = paths.solutions.photoactive
     process_paths.root.ensure()
 
-    airspace_tag, plug_aspect = build_sample_model(
-        paths.triangulation.cadmodel.require(),
-        cmdconfig.boundary_margin,
-        cmdconfig.substomatal_margin,
-        cmdconfig.atol,
+    mesh_ctx: MeshContext = load_volumetric_mesh(paths.meshing.mesh.require())
+
+    solver = PhotoactiveSolver(
+        SolverContext(**config.solver_ctx.model_dump()),
+        mesh_ctx,
     )
 
-    mesh_model(
-        process_paths.mesh.ensure(),
-        airspace_tag,
-        plug_aspect,
-        **cmdconfig.mesh_field.model_dump(),
-    )
+    solution, analysis = solver.solve_for(*cmdconfig.parameters)
 
     # save config
-    save_config(process_paths.config.path, config, "meshing")
+    save_config(process_paths.config.path, config, "solve_active", "solver_ctx")
 
     # save manifest
     dump_manifest(
         process_paths.manifest.path,
-        command_name="mesh",
+        command_name="solve-active",
         sample_id=sample_id,
-        inputs={"cadmodel": paths.triangulation.cadmodel.path},
-        outputs={"mesh": process_paths.mesh.path},
+        inputs={"mesh": paths.meshing.mesh.path},
+        outputs={"solution": process_paths.solution.path},
         metadata={
-            "plug_aspect": plug_aspect,
-            "stomatal_aspect": cmdconfig.mesh_field.stomatal_aspect,
+            "parameters": cmdconfig.parameters,
+            **analysis,
         },
         tool_version=config.meta.project_version,
     )
 
+    if not args.no_save:
+        save_fem_solution(process_paths.solution.path, solution, mesh_ctx)
+
     if args.show:
-        visualize_volumetric_mesh(process_paths.mesh.path)
+        visualize_fem_solution(solution, mesh_ctx.mesh)
 
     return
 
 
 def add_parser(subparsers: argparse._SubParsersAction) -> None:
     parser = subparsers.add_parser(
-        "mesh",
-        help="Generate a mesh for the given sample.",
+        "solve-active",
+        help="Solve the photoactive problem with the specified parameters",
     )
     parser.add_argument(
         "sample_id",
@@ -74,5 +73,10 @@ def add_parser(subparsers: argparse._SubParsersAction) -> None:
         "--show",
         action="store_true",
         help="Visualize the output",
+    )
+    parser.add_argument(
+        "--no-save",
+        action="store_true",
+        help="Do not save the output to disk",
     )
     parser.set_defaults(cmd=_cmd)

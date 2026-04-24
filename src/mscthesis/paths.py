@@ -56,6 +56,28 @@ class MeshingPaths(ProcessPaths):
         return self.root / "mesh.msh"
 
 
+class SolutionPaths(ProcessPaths):
+    @path_field(kind="dir")
+    def solution(self) -> Path:
+        return self.root / "solution.bp"
+
+
+class SolutionsPaths(PathsBase):
+    @path_field(kind="dir")
+    def root(self) -> Path:
+        return self.base / "solutions"
+
+    @child_paths
+    def photoactive(self) -> SolutionPaths:
+        self.root.ensure()
+        return SolutionPaths(self.root.path, "photoactive")
+
+    @child_paths
+    def diffusion(self) -> SolutionPaths:
+        self.root.ensure()
+        return SolutionPaths(self.root.path, "diffusion")
+
+
 class SamplePaths(PathsBase):
     def __init__(self, base: PathLike, sample_id: str) -> None:
         super().__init__(base)
@@ -79,6 +101,11 @@ class SamplePaths(PathsBase):
     def meshing(self) -> MeshingPaths:
         self.root.ensure()
         return MeshingPaths(self.root.path, "meshing")
+
+    @child_paths
+    def solutions(self) -> SolutionsPaths:
+        self.root.ensure()
+        return SolutionsPaths(self.root.path)
 
 
 class ProjectPaths(PathsBase):

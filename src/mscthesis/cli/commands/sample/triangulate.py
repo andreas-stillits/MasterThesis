@@ -5,11 +5,10 @@ import os
 import subprocess
 from typing import cast
 
-from mscthesis.core.visualization import visualize_surface_mesh
-
 from ....config import ProjectConfig, save_config
 from ....core.io import load_voxels, save_surface_mesh
 from ....core.meshing.triangulation import triangulate_voxels
+from ....core.visualization import visualize_surface_mesh
 from ....ids import validate_sample_id
 from ....manifest import dump_manifest, fetch_from_manifest
 from ....paths import ProjectPaths
