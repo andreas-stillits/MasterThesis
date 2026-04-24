@@ -6,7 +6,13 @@ from pathlib import Path
 
 from ..config import ProjectConfig, build_project_config
 from ..log import setup_logging
-from .commands.sample import mesh, solve_active, synthesize_uniform, triangulate
+from .commands.sample import (
+    mesh,
+    solve_active,
+    solve_diffusion,
+    synthesize_uniform,
+    triangulate,
+)
 from .commands.utils import print_config, visualize
 
 try:
@@ -65,6 +71,7 @@ def _build_parser() -> argparse.ArgumentParser:
     triangulate.add_parser(sample_subparsers)
     mesh.add_parser(sample_subparsers)
     solve_active.add_parser(sample_subparsers)
+    solve_diffusion.add_parser(sample_subparsers)
     #
     # ================================================================================
     # umbrella command for ideal pipe commands
