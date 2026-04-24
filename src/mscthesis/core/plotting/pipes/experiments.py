@@ -48,6 +48,28 @@ def plot_experiments(df: pd.DataFrame, output_dir: str | Path | None = None) -> 
 
         save(fig2, output_dir / "by_plug.pdf")
 
+    #
+    fig3, ax3 = figure(size="single")
+    # plot heatmap of resistance_mean as a function of stomatal_aspect and plug_aspect
+    im = ax3.scatter(
+        df["plug_aspect"],
+        df["stomatal_aspect"],
+        c=df["resistance_mean"],
+        cmap="inferno",
+        marker="o",
+        s=100,
+        vmin=1.0,
+        vmax=2.0,
+    )
+    ax3.set_xlabel("plug aspect")
+    ax3.set_ylabel("stomatal aspect")
+    fig3.colorbar(im, ax=ax3, label="resistance mean")
+    #
+    if output_dir is not None:
+        output_dir = Path(output_dir)
+
+        save(fig3, output_dir / "heatmap.pdf")
+
     plt.show()
 
     return
