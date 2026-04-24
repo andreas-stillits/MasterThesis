@@ -152,7 +152,7 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
 
     if args.show:
         dataframe = load_dataframe(paths.experiments.results.require())
-        plot_experiments(dataframe, paths.experiments.plots.ensure() / "summary.pdf")
+        plot_experiments(dataframe, paths.experiments.plots.ensure())
     return
 
 
