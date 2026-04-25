@@ -22,10 +22,6 @@ class Task:
     plug_aspect: float
     stomatal_aspect: float
 
-    def describe(self) -> str:
-        return f"Task {self.index}: plug_aspect={self.plug_aspect:.2f}, \
-             stomatal_aspect={self.stomatal_aspect:.2f}"
-
 
 def make_tasks(
     plug_aspect_min: float,
@@ -70,7 +66,7 @@ def initialize_worker(force: bool) -> None:
     }
 
 
-def execute_task(task: Task) -> dict[str, int | float]:
+def execute_task(task: Task) -> dict[str, int | float] | None:
     global _STATE
     config: ProjectConfig = _STATE["config"]
     paths: PipePaths = _STATE["paths"]
@@ -93,8 +89,8 @@ def execute_task(task: Task) -> dict[str, int | float]:
     mesh_ctx: MeshContext = load_volumetric_mesh(mesh.require())
 
     # solve diffusion if not already done or if force is True
-    results_path = paths.experiments.results
-    if not results_path.exists() or force:
+    results = paths.experiments.results
+    if not results.exists() or force:
         solver = DiffusionSolver(
             SolverContext(**config.solver_ctx.model_dump()),
             mesh_ctx,
@@ -108,7 +104,6 @@ def execute_task(task: Task) -> dict[str, int | float]:
             flux = analysis["top_flux_grad"] / analysis["plug_area"]
             resistances.append(np.abs((chii - chit) / flux))
 
-        solution, analysis = solver.solve_for(*config.solve_diffusion.parameters)
         return {
             "index": task.index,
             "plug_aspect": task.plug_aspect,
@@ -117,15 +112,14 @@ def execute_task(task: Task) -> dict[str, int | float]:
             "resistance_std": float(np.std(resistances)),
         }
 
-    return {}
+    return
 
 
 def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
-    """Command function for the pipe run command."""
+    """Command function for the pipes run command."""
 
-    paths = ProjectPaths(config.behavior.storage_root).pipes
-    paths.experiments.root.ensure()
-    paths.experiments.meshes.ensure()
+    paths = ProjectPaths(config.behavior.storage_root).pipes.experiments
+    paths.root.ensure()
 
     tasks = make_tasks(**config.pipes.make.model_dump())
 
@@ -138,20 +132,20 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
         error_policy="raise",
     )
 
-    aggregate = [item.result for item in report.completed if item.result if item.result]
+    aggregate = [item.result for item in report.completed if item.result is not None]
 
+    # if calculations were performed so aggregate is not empty, save the results
     if aggregate:
-        dataframe = pd.DataFrame([item.result for item in report.completed])
+        dataframe = pd.DataFrame(aggregate)
         dataframe.sort_values(["plug_aspect", "stomatal_aspect"]).reset_index(
             drop=True, inplace=True
         )
-        save_dataframe(paths.experiments.results.path, dataframe)
+        save_dataframe(paths.results.path, dataframe)
 
-    save_config(paths.experiments.config.path, config, "pipes", "meshing", "solver_ctx")
+    save_config(paths.config.path, config, "pipes", "meshing", "solver_ctx")
 
-    if args.show:
-        dataframe = load_dataframe(paths.experiments.results.require())
-        plot_experiments(dataframe, paths.experiments.plots.ensure())
+    dataframe = load_dataframe(paths.results.require())
+    plot_experiments(dataframe, paths.plots.ensure(), show=args.show)
     return
 
 

@@ -9,6 +9,19 @@ from stillib_paths import PathLike, PathsBase, child_paths, path_field
 # =======================================================================
 
 
+class MeshFilePaths(PathsBase):
+    def __init__(
+        self, base: PathLike, specifier: int | float, format: str = "03d"
+    ) -> None:
+        super().__init__(base)
+        self.specifier = specifier
+        self.format = format
+
+    @path_field(kind="file")
+    def file(self) -> Path:
+        return self.base / f"mesh_{self.specifier:{self.format}}.msh"
+
+
 class ValidationPaths(PathsBase):
     def __init__(self, base: PathLike, name: str) -> None:
         super().__init__(base)
@@ -18,25 +31,24 @@ class ValidationPaths(PathsBase):
     def root(self) -> Path:
         return self.base / self.name
 
+    @path_field(kind="dir")
+    def meshes(self) -> Path:
+        return self.root / "meshes"
+
+    @path_field(kind="file")
+    def plot(self) -> Path:
+        return self.root / "plot.pdf"
+
+    @path_field(kind="file")
+    def results(self) -> Path:
+        return self.root / "results.csv"
+
     @path_field(kind="file")
     def config(self) -> Path:
         return self.root / "config.json"
 
-    @path_field(kind="file")
-    def plots(self) -> Path:
-        return self.root / "plots.pdf"
-
-
-class PipeMeshPaths(PathsBase):
-    def __init__(self, base: PathLike, index: int) -> None:
-        super().__init__(base)
-        self.index = index
-
-    @path_field(kind="file")
-    def file(self) -> Path:
-        return (
-            self.base / f"mesh_{self.index:03d}.msh"
-        )  # zero-padded index, e.g. 7 -> 007
+    def mesh(self, scale_factor: float) -> MeshFilePaths:
+        return MeshFilePaths(self.meshes.ensure(), scale_factor, format=".2f")
 
 
 class ExperimentPaths(PathsBase):
@@ -60,8 +72,8 @@ class ExperimentPaths(PathsBase):
     def config(self) -> Path:
         return self.root / "config.json"
 
-    def mesh(self, index: int) -> PipeMeshPaths:
-        return PipeMeshPaths(self.meshes.path, index)
+    def mesh(self, index: int) -> MeshFilePaths:
+        return MeshFilePaths(self.meshes.ensure(), index, format="03d")
 
 
 class PipePaths(PathsBase):
@@ -71,12 +83,14 @@ class PipePaths(PathsBase):
 
     @child_paths
     def experiments(self) -> ExperimentPaths:
-        self.root.ensure()
         return ExperimentPaths(self.root.path)
 
+    @path_field(kind="dir")
+    def validations(self) -> Path:
+        return self.root / "validations"
+
     def validation(self, name: str) -> ValidationPaths:
-        self.root.ensure()
-        return ValidationPaths(self.root.path, name)
+        return ValidationPaths(self.validations.ensure(), name)
 
 
 # =======================================================================
@@ -137,13 +151,11 @@ class SolutionsPaths(PathsBase):
 
     @child_paths
     def photoactive(self) -> SolutionPaths:
-        self.root.ensure()
-        return SolutionPaths(self.root.path, "photoactive")
+        return SolutionPaths(self.root.ensure(), "photoactive")
 
     @child_paths
     def diffusion(self) -> SolutionPaths:
-        self.root.ensure()
-        return SolutionPaths(self.root.path, "diffusion")
+        return SolutionPaths(self.root.ensure(), "diffusion")
 
 
 class SamplePaths(PathsBase):
@@ -157,23 +169,19 @@ class SamplePaths(PathsBase):
 
     @child_paths
     def synthesis(self) -> SynthesisPaths:
-        self.root.ensure()
-        return SynthesisPaths(self.root.path, "synthesis")
+        return SynthesisPaths(self.root.ensure(), "synthesis")
 
     @child_paths
     def triangulation(self) -> TriangulationPaths:
-        self.root.ensure()
-        return TriangulationPaths(self.root.path, "triangulation")
+        return TriangulationPaths(self.root.ensure(), "triangulation")
 
     @child_paths
     def meshing(self) -> MeshingPaths:
-        self.root.ensure()
-        return MeshingPaths(self.root.path, "meshing")
+        return MeshingPaths(self.root.ensure(), "meshing")
 
     @child_paths
     def solutions(self) -> SolutionsPaths:
-        self.root.ensure()
-        return SolutionsPaths(self.root.path)
+        return SolutionsPaths(self.root.ensure())
 
 
 # =======================================================================

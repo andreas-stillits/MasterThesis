@@ -111,15 +111,26 @@ class PipesMakeConfig(BaseModel):
 
     plug_aspect_min: float = 0.10
     plug_aspect_max: float = 0.50
-    plug_aspect_delta: float = 0.05
-    stomatal_aspect_min: float = 0.025
-    stomatal_aspect_delta: float = 0.025
+    plug_aspect_delta: float = 0.10
+    stomatal_aspect_min: float = 0.05
+    stomatal_aspect_delta: float = 0.05
+
+
+class PipesValidationConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    scale_min: float = 1.0
+    scale_max: float = 4.0
+    scale_num: int = 10
+    plug_aspect: float = 0.25
+    stomatal_aspect: float = 0.05
 
 
 class PipesConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     make: PipesMakeConfig = PipesMakeConfig()
+    validation: PipesValidationConfig = PipesValidationConfig()
     parameter_sets: tuple[tuple[float, float], ...] = (
         (0.80, 0.20),
         (0.80, 0.40),

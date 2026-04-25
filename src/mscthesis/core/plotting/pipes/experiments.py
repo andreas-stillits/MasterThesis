@@ -7,7 +7,9 @@ import pandas as pd
 from stillib_plotting import figure, save, use_style
 
 
-def plot_experiments(df: pd.DataFrame, output_dir: str | Path | None = None) -> None:
+def plot_experiments(
+    df: pd.DataFrame, output_dir: str | Path | None = None, show: bool = True
+) -> None:
     use_style()
     #
     fig1, ax1 = figure(size="single")
@@ -70,6 +72,7 @@ def plot_experiments(df: pd.DataFrame, output_dir: str | Path | None = None) -> 
 
         save(fig3, output_dir / "heatmap.pdf")
 
-    plt.show()
+    if show:
+        plt.show()
 
     return
