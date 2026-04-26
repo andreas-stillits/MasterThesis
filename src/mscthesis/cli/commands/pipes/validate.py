@@ -90,7 +90,8 @@ def execute_task(task: Task) -> list[dict[str, Any]] | None:
                 SolverContext(**solver_ctx),
                 mesh_ctx,
             )
-            solution, analysis = solver.solve_for(*config.pipes.parameter_sets[0])
+            parameters = config.pipes.parameter_sets[0]
+            solution, analysis = solver.solve_for(*parameters)
             chii = analysis["substomatal_mean"]
             chit = analysis["top_mean"]
             flux = analysis["top_flux_grad"] / analysis["plug_area"]
@@ -99,6 +100,8 @@ def execute_task(task: Task) -> list[dict[str, Any]] | None:
                 {
                     "scale_factor": task.scale_factor,
                     "order": order,
+                    "par_chii": parameters[0],
+                    "par_chit": parameters[1],
                     "resistance": resistance,
                     **analysis,
                 }
@@ -114,6 +117,12 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
 
     paths = ProjectPaths(config.behavior.storage_root).pipes.validation(args.tag)
     paths.root.ensure()
+
+    # delete existing files if force is True
+    if args.force:
+        for path in paths.meshes.path.glob("*.msh"):
+            # delete mesh files
+            path.unlink()
 
     tasks = make_tasks(**config.pipes.validation.model_dump())
 

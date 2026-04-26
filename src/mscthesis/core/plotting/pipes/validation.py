@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from stillib_plotting import (
+    despine,
     figure,
     gridlines,
     label_panel,
@@ -16,13 +17,15 @@ from stillib_plotting import (
 )
 
 colors = {
-    "substomatal_mean": "#052D76",
+    "substomatal_mean": "#053389",
     "mesophyll_mean": "#087313",
-    "top_mean": "#63148d",
+    "top_mean": "#0483d8",
     "curved_flux_grad": "#903b7a",
-    "top_flux_grad": "#9467bd",
+    "top_flux_grad": "#8e0606",
     "mesophyll_flux_sol": "#317134",
-    "stomatal_flux_grad": "#283375",
+    "stomatal_flux_grad": "#DB5A0A",
+    "bottom_flux_grad": "#af1a1a",
+    "total_flux_grad": "#000000",
 }
 
 
@@ -33,7 +36,7 @@ def _npy(df: pd.DataFrame, key: str) -> np.ndarray:
 def _rel_error(x: np.ndarray, y: np.ndarray) -> np.ndarray:
     with np.errstate(divide="ignore", invalid="ignore"):
         rel_error = np.abs((x - y) / x)
-    rel_error[np.isclose(rel_error, 0.0)] = np.nan
+    rel_error[np.isclose(rel_error, 0.0, atol=1e-9)] = np.nan
     return rel_error
 
 
@@ -71,143 +74,123 @@ def _std_layout(
     return
 
 
-def create_qoi_figure(df: pd.DataFrame, ax0: plt.Axes, ax1: plt.Axes) -> None:
-    df1, df2 = _split_by_order(df)
-    x = _npy(df1, "scale_factor")
+_LINESTYLES = ["--", "-"]
+
+
+def create_qoi_figure(df1: pd.DataFrame, df2: pd.DataFrame, ax: plt.Axes) -> None:
+    keys = ["substomatal_mean", "top_mean", "stomatal_flux_grad", "top_flux_grad"]
+    labels = [r"$\chi_{s}$", r"$\chi_{ad}$", r"$Q_{s}$", r"$Q_{ad}$"]
     #
-    keys_conc = ["substomatal_mean", "mesophyll_mean", "top_mean"]
-    labels_conc = [r"$C_{st}$", r"$C_{m}$", r"$C_{top}$"]
-
-    keys_flux = ["mesophyll_flux_sol", "top_flux_grad"]
-    labels_flux = [r"$A_{m}$", r"$A_{top}$"]
-
-    for df, linestyle in zip([df1, df2], ["-", "--"], strict=True):
-        labels_conc = ["", "", ""] if linestyle == "--" else labels_conc
-        labels_flux = ["", ""] if linestyle == "--" else labels_flux
-        for key, label in zip(keys_conc, labels_conc, strict=True):
-            ax0.plot(
-                x, _npy(df, key), linestyle=linestyle, label=label, color=colors[key]
+    ax.set_xscale("log")
+    ax_ = ax.twinx()
+    h = _npy(df1, "scale_factor")
+    for ls, df in zip(_LINESTYLES, [df1, df2], strict=True):
+        for key, label in zip(keys, labels, strict=True):
+            _ax = ax_ if "flux" in key else ax
+            _ax.plot(
+                h,
+                _npy(df, key),
+                linestyle=ls,
+                label=label if ls == "-" else "",
+                color=colors[key],
             )
-        for key, label in zip(keys_flux, labels_flux, strict=True):
-            ax1.plot(
-                x, _npy(df, key), linestyle=linestyle, label=label, color=colors[key]
-            )
-
-    _std_layout(
-        ax0, ylabel="Mean concentrations", title="Conc. QoI", ymin=0.0, ymax=1.05
+    ax.set_xlabel("Scale factor h []")
+    ax.set_ylabel(r"Concentrations $\chi$ []", color=colors["substomatal_mean"])
+    ax.tick_params(
+        axis="y",
+        colors=colors["substomatal_mean"],
+        labelcolor=colors["substomatal_mean"],
     )
-    _std_layout(ax1, xlabel="Resolution factor", ylabel="Flow rates", title="Flux QoI")
+    ax.set_ylim(0.0, None)
+    ax.legend(loc="center left", bbox_to_anchor=(1.0, 1.0))
+    # change yaxis color of ax to match the flux colors
+    ax_.set_ylabel(r"Flow rates $Q$ []", color=colors["top_flux_grad"])
+    ax_.tick_params(
+        axis="y", colors=colors["top_flux_grad"], labelcolor=colors["top_flux_grad"]
+    )
+    ax_.set_ylim(0.0, None)
+    ax_.legend(loc="center left", bbox_to_anchor=(1.0, 0.0))
     return
 
 
-def create_bc_adherence_figure(df: pd.DataFrame, ax0: plt.Axes, ax1: plt.Axes) -> None:
-    df1, df2 = _split_by_order(df)
-    x = _npy(df1, "scale_factor")
-
+def create_bc_adherence_figure(
+    df1: pd.DataFrame, df2: pd.DataFrame, ax: plt.Axes
+) -> None:
+    h = _npy(df1, "scale_factor")
+    for ls, df in zip(_LINESTYLES, [df1, df2], strict=True):
+        # Neumann
+        keys = ["curved_flux_grad", "bottom_flux_grad"]
+        labels = [r"$\Sigma_R$ Neumann", r"$\Sigma_{ab}$ \ $\Sigma_s$ Neumann"]
+        for key, label in zip(keys, labels, strict=True):
+            ax.plot(
+                h,
+                _npy(df, key),
+                linestyle=ls,
+                label=label if ls == "-" else "",
+                color=colors[key],
+            )
+        # Dirichlet
+        data = [
+            _rel_error(_npy(df, "par_chii"), _npy(df, "substomatal_mean")),
+            _rel_error(_npy(df, "par_chit"), _npy(df, "top_mean")),
+        ]
+        keys = ["substomatal_mean", "top_mean"]
+        labels = [r"$\Sigma_{s}$ Dirichlet", r"$\Sigma_{ad}$ Dirichlet"]
+        for signal, key, label in zip(data, keys, labels, strict=True):
+            ax.plot(
+                h,
+                signal,
+                linestyle=ls,
+                label=label if ls == "-" else "",
+                color=colors[key],
+            )
     #
-    for df, linestyle in zip([df1, df2], ["-", "--"], strict=True):
-        flux_m_direct = _npy(df, "mesophyll_flux_grad")
-        flux_m_equiv = _npy(df, "mesophyll_flux_sol")
-        flux_truth = flux_m_equiv[np.argmin(x)]
-        flux_curved = _npy(df, "curved_flux_grad") / flux_truth
-        fluc_top = _npy(df, "top_flux_grad") / flux_truth
-        ax0.plot(
-            x,
-            flux_curved,
-            linestyle=linestyle,
-            label="Curved BC" if linestyle == "-" else "",
-            color=colors["curved_flux_grad"],
-        )
-        ax0.plot(
-            x,
-            fluc_top,
-            linestyle=linestyle,
-            label="Top BC" if linestyle == "-" else "",
-            color=colors["top_flux_grad"],
-        )
-        #
-        ax1.plot(
-            x,
-            _rel_error(flux_m_equiv, flux_m_direct),
-            linestyle=linestyle,
-            label="mesophyll" if linestyle == "-" else "",
-            color=colors["mesophyll_flux_sol"],
-        )
-
-    _std_layout(ax0, ylabel="Relative flux magnitude", title="Neumann BC adherence")
-    _std_layout(
-        ax1,
-        xlabel="Resolution factor",
-        ylabel="Relative difference",
-        title="Robin BC adherence",
-        ylog=False,
-    )
+    despine(ax)
+    set_axis_labels(ax, xlabel="Scale factor h []", ylabel="Error []")
+    ax.set_ylim(0.0, None)
+    ax.set_xscale("log")
+    ax.legend(loc="center left", bbox_to_anchor=(1.0, 1.0))
     return
 
 
 def create_convergence_figure(
-    df: pd.DataFrame,
+    df1: pd.DataFrame,
+    df2: pd.DataFrame,
     ax: plt.Axes,
-    tolerance: float = 1e-2,
-    ignore_threshold: float = 1e-1,
 ) -> None:
-    df1, df2 = _split_by_order(df)
-    x = _npy(df1, "scale_factor")
+    h = _npy(df1, "scale_factor")
     #
-    keys_conc = ["substomatal_mean", "mesophyll_mean", "top_mean"]
-    labels_conc = [r"$C_{st}$", r"$C_{m}$", r"$C_{top}$"]
-    keys_flux = ["mesophyll_flux_sol", "top_flux_grad"]
-    labels_flux = [r"$A_{m}$", r"$A_{top}$"]
+    keys = [
+        "stomatal_flux_grad",
+        "top_flux_grad",
+        "curved_flux_grad",
+        "total_flux_grad",
+    ]
+    labels = [r"$Q_{s}$", r"$Q_{ad}$", r"$Q_{R}$", r"$Q_{total}$"]
+    for ls, df in zip(_LINESTYLES, [df1, df2], strict=True):
+        for key, label in zip(keys, labels, strict=True):
+            truth = _npy(df2, key)[np.argmin(h)]
+            signal = _rel_error(truth, _npy(df, key))
+            ax.plot(
+                h,
+                signal,
+                linestyle=ls,
+                label=label if ls == "-" else "",
+                color=colors[key],
+            )
     ax.hlines(
-        tolerance,
-        np.min(x),
-        np.max(x),
-        colors="#af1a1a",
-        linestyles="-.",
-        linewidth=2.0,
-        label=f"{100*tolerance:.0f}% tolerance",
+        1e-2, np.min(h), np.max(h), color="grey", linestyle="-.", label="1% threshold"
     )
-    true_flux = _npy(df2, "mesophyll_flux_sol")[np.argmin(x)]
-    for df, linestyle in zip([df1, df2], ["-", "--"], strict=True):
-        labels_conc = ["", "", ""] if linestyle == "--" else labels_conc
-        labels_flux = ["", ""] if linestyle == "--" else labels_flux
-        #
-        for key, label in zip(keys_conc, labels_conc, strict=True):
-            q1s = _npy(df, key)
-            q2 = _npy(df2, key)[np.argmin(x)]
-            ax.plot(
-                x,
-                _rel_error(q2, q1s),
-                label=label,
-                linestyle=linestyle,
-                color=colors[key],
-            )
-
-        for key, label in zip(keys_flux, labels_flux, strict=True):
-            q1s = _npy(df, key)
-            q2 = true_flux if key != "top_flux_grad" else _npy(df2, key)[np.argmin(x)]
-            if (
-                key == "top_flux_grad"
-                and q1s[np.argmin(x)] / true_flux < ignore_threshold
-            ):
-                continue
-
-            ax.plot(
-                x,
-                _rel_error(q2, q1s),
-                label=label,
-                linestyle=linestyle,
-                color=colors[key],
-            )
-
-    _std_layout(
+    set_axis_labels(
         ax,
-        xlabel="Resolution factor",
-        ylabel="Relative difference to CG2",
-        title="Convergence to CG2 solution",
-        ylog=True,
-        ymin=1e-4,
+        xlabel="Scale factor h []",
+        ylabel=r"Relative difference to CG2($h_{min}$) []",
     )
+    despine(ax)
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    # ax.set_ylim(1e-6, None)
+    ax.legend(loc="center left", bbox_to_anchor=(1.0, 1.0))
 
     return
 
@@ -215,36 +198,29 @@ def create_convergence_figure(
 def plot_validation(
     df: pd.DataFrame,
     output_path: str | Path,
-    tolerance: float = 1e-2,
-    ignore_threshold: float = 1e-1,
     show: bool = True,
 ) -> None:
     """
     Plot validation results and save as .pdf
     """
     use_style()
-    fig = plt.figure(figsize=(12.0, 4.2))
-    spec = fig.add_gridspec(nrows=2, ncols=3, hspace=0.5, wspace=0.8)
-    ax10 = fig.add_subplot(spec[0, 0])
-    ax11 = fig.add_subplot(spec[1, 0], sharex=ax10)
-    ax10.tick_params(axis="x", which="both", labelbottom=False)
-    ax20 = fig.add_subplot(spec[0, 1])
-    ax21 = fig.add_subplot(spec[1, 1], sharex=ax20)
-    ax20.tick_params(axis="x", which="both", labelbottom=False)
-    ax3 = fig.add_subplot(spec[:, 2])
-    #
-    create_qoi_figure(df, ax10, ax11)
-    label_panel(ax10, "(a)")
-    label_panel(ax11, "(b)")
-    #
-    create_bc_adherence_figure(df, ax20, ax21)
-    label_panel(ax20, "(c)")
-    label_panel(ax21, "(d)")
-    #
-    create_convergence_figure(
-        df, ax3, tolerance=tolerance, ignore_threshold=ignore_threshold
+    df1, df2 = _split_by_order(df)
+
+    fig, axs = panel_grid(
+        nrows=1,
+        ncols=3,
+        size=(10.0, 2.0),
+        gridspec_kw={"wspace": 1.0},
     )
-    label_panel(ax3, "(e)")
+    create_qoi_figure(df1, df2, axs[0])
+    label_panel(axs[0], "(a)")
+    #
+    create_bc_adherence_figure(df1, df2, axs[1])
+    label_panel(axs[1], "(b)")
+    #
+    create_convergence_figure(df1, df2, axs[2])
+    label_panel(axs[2], "(c)")
+    #
     save(fig, output_path)
     #
     if show:
