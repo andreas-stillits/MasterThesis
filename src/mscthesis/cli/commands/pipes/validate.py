@@ -75,13 +75,13 @@ def execute_task(task: Task) -> list[dict[str, Any]] | None:
             **mesh_field_settings,
         )
 
-    mesh_ctx: MeshContext = load_volumetric_mesh(mesh.require())
-
     # solve diffusion if not already done or if force is True
     results = paths.results
     if not results.exists() or force:
 
         qois: list[dict[str, Any]] = []
+
+        mesh_ctx: MeshContext = load_volumetric_mesh(mesh.require())
 
         for order in [1, 2]:
             solver_ctx = config.solver_ctx.model_dump()
@@ -129,6 +129,7 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
     report = collect(
         tasks,
         execute_task,
+        max_workers=8,
         initializer=initialize_worker,
         initargs=(args.force, args.tag),
         progress_callback=print_progress,

@@ -119,8 +119,12 @@ def create_bc_adherence_figure(
     h = _npy(df1, "scale_factor")
     for ls, df in zip(_LINESTYLES, [df1, df2], strict=True):
         # Neumann
-        keys = ["curved_flux_grad", "bottom_flux_grad"]
-        labels = [r"$\Sigma_R$ Neumann", r"$\Sigma_{ab}$ \ $\Sigma_s$ Neumann"]
+        keys = ["curved_flux_grad", "bottom_flux_grad", "total_flux_grad"]
+        labels = [
+            r"$\Sigma_R$ Neumann",
+            r"$\Sigma_{ab}$ \ $\Sigma_s$ Neumann",
+            r"$\partial \Omega conservation$",
+        ]
         for key, label in zip(keys, labels, strict=True):
             ax.plot(
                 h,

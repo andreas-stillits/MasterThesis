@@ -59,7 +59,7 @@ class MeshFieldConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     stomatal_aspect: float = 0.05
-    scale_factor: float = 2.0
+    scale_factor: float = 1.0
     global_max_num: int = 25
     edge_min_num: int = 50
     edge_dist_min: float = 0.04
@@ -67,8 +67,8 @@ class MeshFieldConfig(BaseModel):
     cell_min: float = 0.01
     cell_dist_min: float = 0.01
     cell_dist_max: float = 0.05
-    inlet_min: float = 0.002
-    inlet_dist_min: float = 0.08
+    inlet_min: float = 0.005
+    inlet_dist_min: float = 0.025
     inlet_dist_max: float = 0.50
     atol: float = 0.005
 
@@ -111,9 +111,9 @@ class PipesMakeConfig(BaseModel):
 
     plug_aspect_min: float = 0.10
     plug_aspect_max: float = 0.50
-    plug_aspect_delta: float = 0.10
-    stomatal_aspect_min: float = 0.05
-    stomatal_aspect_delta: float = 0.05
+    plug_aspect_delta: float = 0.025
+    stomatal_aspect_min: float = 0.025
+    stomatal_aspect_delta: float = 0.025
 
 
 class PipesValidationConfig(BaseModel):
