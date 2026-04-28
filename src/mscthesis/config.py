@@ -62,13 +62,13 @@ class MeshFieldConfig(BaseModel):
     scale_factor: float = 1.0
     global_max_num: int = 25
     edge_min_num: int = 50
-    edge_dist_min: float = 0.04
-    edge_dist_max: float = 0.08
+    edge_dist_min: float = 0.025
+    edge_dist_max: float = 0.050
     cell_min: float = 0.01
     cell_dist_min: float = 0.01
     cell_dist_max: float = 0.05
-    inlet_min: float = 0.005
-    inlet_dist_min: float = 0.025
+    inlet_min: float = 0.01
+    inlet_dist_min: float = 0.10
     inlet_dist_max: float = 0.50
     atol: float = 0.005
 
@@ -121,9 +121,9 @@ class PipesValidationConfig(BaseModel):
 
     scale_min: float = 1.0
     scale_max: float = 4.0
-    scale_num: int = 16
-    plug_aspect: float = 0.25
-    stomatal_aspect: float = 0.05
+    scale_num: int = 32
+    plug_aspect: float = 0.50
+    stomatal_aspect: float = 0.10
 
 
 class PipesConfig(BaseModel):

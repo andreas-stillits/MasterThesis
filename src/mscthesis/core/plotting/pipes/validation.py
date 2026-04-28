@@ -20,13 +20,17 @@ colors = {
     "substomatal_mean": "#053389",
     "mesophyll_mean": "#087313",
     "top_mean": "#0483d8",
+    "airspace_mean": "#1e7e1e",
     "curved_flux_grad": "#903b7a",
     "top_flux_grad": "#8e0606",
     "mesophyll_flux_sol": "#317134",
     "stomatal_flux_grad": "#DB5A0A",
     "bottom_flux_grad": "#af1a1a",
     "total_flux_grad": "#000000",
+    "resistance": "#2F8CC6",
 }
+
+_LINESTYLES = ["--", "-"]
 
 
 def _npy(df: pd.DataFrame, key: str) -> np.ndarray:
@@ -47,158 +51,6 @@ def _split_by_order(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     return dfs
 
 
-def _std_layout(
-    ax: plt.Axes,
-    xlabel: str | None = None,
-    ylabel: str | None = None,
-    title: str | None = None,
-    xlog: bool = True,
-    ylog: bool = False,
-    legend: bool = True,
-    loc: str = "center left",
-    ymin: float | None = None,
-    ymax: float | None = None,
-) -> None:
-    set_axis_labels(ax, xlabel=xlabel, ylabel=ylabel)
-    if title is not None:
-        ax.set_title(title)
-    gridlines(ax)
-    if xlog:
-        ax.set_xscale("log")
-    if ylog:
-        ax.set_yscale("log")
-    if legend:
-        ax.legend(loc=loc, bbox_to_anchor=(1.0, 1.0))
-    ax.set_ylim(ymin, ymax)
-    ax.set_xlim(1.0, None)
-    return
-
-
-_LINESTYLES = ["--", "-"]
-
-
-def create_qoi_figure(df1: pd.DataFrame, df2: pd.DataFrame, ax: plt.Axes) -> None:
-    keys = ["substomatal_mean", "top_mean", "stomatal_flux_grad", "top_flux_grad"]
-    labels = [r"$\chi_{s}$", r"$\chi_{ad}$", r"$Q_{s}$", r"$Q_{ad}$"]
-    #
-    ax.set_xscale("log")
-    ax_ = ax.twinx()
-    h = _npy(df1, "scale_factor")
-    for ls, df in zip(_LINESTYLES, [df1, df2], strict=True):
-        for key, label in zip(keys, labels, strict=True):
-            _ax = ax_ if "flux" in key else ax
-            _ax.plot(
-                h,
-                _npy(df, key),
-                linestyle=ls,
-                label=label if ls == "-" else "",
-                color=colors[key],
-            )
-    ax.set_xlabel("Scale factor h []")
-    ax.set_ylabel(r"Concentrations $\chi$ []", color=colors["substomatal_mean"])
-    ax.tick_params(
-        axis="y",
-        colors=colors["substomatal_mean"],
-        labelcolor=colors["substomatal_mean"],
-    )
-    ax.set_ylim(0.0, None)
-    ax.legend(loc="center left", bbox_to_anchor=(1.0, 1.0))
-    # change yaxis color of ax to match the flux colors
-    ax_.set_ylabel(r"Flow rates $Q$ []", color=colors["top_flux_grad"])
-    ax_.tick_params(
-        axis="y", colors=colors["top_flux_grad"], labelcolor=colors["top_flux_grad"]
-    )
-    ax_.set_ylim(0.0, None)
-    ax_.legend(loc="center left", bbox_to_anchor=(1.0, 0.0))
-    return
-
-
-def create_bc_adherence_figure(
-    df1: pd.DataFrame, df2: pd.DataFrame, ax: plt.Axes
-) -> None:
-    h = _npy(df1, "scale_factor")
-    for ls, df in zip(_LINESTYLES, [df1, df2], strict=True):
-        # Neumann
-        keys = ["curved_flux_grad", "bottom_flux_grad", "total_flux_grad"]
-        labels = [
-            r"$\Sigma_R$ Neumann",
-            r"$\Sigma_{ab}$ \ $\Sigma_s$ Neumann",
-            r"$\partial \Omega conservation$",
-        ]
-        for key, label in zip(keys, labels, strict=True):
-            ax.plot(
-                h,
-                _npy(df, key),
-                linestyle=ls,
-                label=label if ls == "-" else "",
-                color=colors[key],
-            )
-        # Dirichlet
-        data = [
-            _rel_error(_npy(df, "par_chii"), _npy(df, "substomatal_mean")),
-            _rel_error(_npy(df, "par_chit"), _npy(df, "top_mean")),
-        ]
-        keys = ["substomatal_mean", "top_mean"]
-        labels = [r"$\Sigma_{s}$ Dirichlet", r"$\Sigma_{ad}$ Dirichlet"]
-        for signal, key, label in zip(data, keys, labels, strict=True):
-            ax.plot(
-                h,
-                signal,
-                linestyle=ls,
-                label=label if ls == "-" else "",
-                color=colors[key],
-            )
-    #
-    despine(ax)
-    set_axis_labels(ax, xlabel="Scale factor h []", ylabel="Error []")
-    ax.set_ylim(0.0, None)
-    ax.set_xscale("log")
-    ax.legend(loc="center left", bbox_to_anchor=(1.0, 1.0))
-    return
-
-
-def create_convergence_figure(
-    df1: pd.DataFrame,
-    df2: pd.DataFrame,
-    ax: plt.Axes,
-) -> None:
-    h = _npy(df1, "scale_factor")
-    #
-    keys = [
-        "stomatal_flux_grad",
-        "top_flux_grad",
-        "curved_flux_grad",
-        "total_flux_grad",
-    ]
-    labels = [r"$Q_{s}$", r"$Q_{ad}$", r"$Q_{R}$", r"$Q_{total}$"]
-    for ls, df in zip(_LINESTYLES, [df1, df2], strict=True):
-        for key, label in zip(keys, labels, strict=True):
-            truth = _npy(df2, key)[np.argmin(h)]
-            signal = _rel_error(truth, _npy(df, key))
-            ax.plot(
-                h,
-                signal,
-                linestyle=ls,
-                label=label if ls == "-" else "",
-                color=colors[key],
-            )
-    ax.hlines(
-        1e-2, np.min(h), np.max(h), color="grey", linestyle="-.", label="1% threshold"
-    )
-    set_axis_labels(
-        ax,
-        xlabel="Scale factor h []",
-        ylabel=r"Relative difference to CG2($h_{min}$) []",
-    )
-    despine(ax)
-    ax.set_xscale("log")
-    ax.set_yscale("log")
-    # ax.set_ylim(1e-6, None)
-    ax.legend(loc="center left", bbox_to_anchor=(1.0, 1.0))
-
-    return
-
-
 def plot_validation(
     df: pd.DataFrame,
     output_path: str | Path,
@@ -212,18 +64,77 @@ def plot_validation(
 
     fig, axs = panel_grid(
         nrows=1,
-        ncols=3,
-        size=(10.0, 2.0),
-        gridspec_kw={"wspace": 1.0},
+        ncols=2,
+        size="double",
+        gridspec_kw={"wspace": 0.50},
     )
-    create_qoi_figure(df1, df2, axs[0])
+
+    h = _npy(df2, "scale_factor")
+    true_flux = _npy(df2, "top_flux_grad")[np.argmin(h)]
+
+    # plot boundary values relative to target values
+    def _fill_in(ax: plt.Axes, df: pd.DataFrame, linestyle: str) -> None:
+        keys = ["curved_flux_grad", "total_flux_grad"]
+        labels = [r"$\Sigma_R$", r"$\partial \Omega$"]
+        for key, label in zip(keys, labels):
+            ax.plot(
+                h,
+                _npy(df, key) / true_flux,
+                color=colors[key],
+                label=label if linestyle == "-" else "",
+                linestyle=linestyle,
+            )
+
+    for df, ls in zip([df1, df2], _LINESTYLES):
+        _fill_in(axs[0], df, ls)
     label_panel(axs[0], "(a)")
-    #
-    create_bc_adherence_figure(df1, df2, axs[1])
+    set_axis_labels(
+        axs[0],
+        xlabel="Scale factor h []",
+        ylabel=r"Integral boundary flux relative to $A_N$ []",
+    )
+    axs[0].set_xscale("log")
+    axs[0].legend(loc="center left", bbox_to_anchor=(1.0, 1.0))
+
+    # plot convergence of flux and solution to CG2 finest resolution values
+    keys = [
+        "top_flux_grad",
+        "substomatal_mean",
+        "top_mean",
+        "airspace_mean",
+        "resistance",
+    ]
+    targets = {key: _npy(df2, key)[np.argmin(h)] for key in keys}
+    labels = [
+        r"$Q_{ad}$",
+        r"$\chi_{s}$",
+        r"$\chi_{ad}$",
+        r"$\chi_{ias}$",
+        r"Resistance $\rho$",
+    ]
+
+    for df, ls in zip([df1, df2], _LINESTYLES):
+        for key, label in zip(keys, labels):
+            signal = _rel_error(targets[key], _npy(df, key))
+            if np.all(np.isnan(signal)):
+                continue
+            axs[1].plot(
+                h,
+                signal,
+                color=colors[key],
+                label=label if ls == "-" else "",
+                linestyle=ls,
+            )
     label_panel(axs[1], "(b)")
-    #
-    create_convergence_figure(df1, df2, axs[2])
-    label_panel(axs[2], "(c)")
+    set_axis_labels(
+        axs[1],
+        xlabel="Scale factor h []",
+        ylabel=r"Relative difference to CG2($h_{min}$) []",
+    )
+    axs[1].set_xscale("log")
+    axs[1].set_yscale("log")
+    axs[1].legend(loc="center left", bbox_to_anchor=(1.0, 1.0))
+
     #
     save(fig, output_path)
     #
