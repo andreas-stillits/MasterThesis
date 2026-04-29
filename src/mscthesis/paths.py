@@ -165,7 +165,7 @@ class SamplePaths(PathsBase):
 
     @path_field(kind="dir")
     def root(self) -> Path:
-        return self.base / "samples" / self.sample_id
+        return self.base / self.sample_id
 
     @child_paths
     def synthesis(self) -> SynthesisPaths:
@@ -194,5 +194,9 @@ class ProjectPaths(PathsBase):
     def pipes(self) -> PipePaths:
         return PipePaths(self.base)
 
+    @path_field(kind="dir")
+    def samples(self) -> Path:
+        return self.base / "samples"
+
     def sample(self, sample_id: str) -> SamplePaths:
-        return SamplePaths(self.base, sample_id)
+        return SamplePaths(self.samples.ensure(), sample_id)

@@ -31,10 +31,29 @@ class SynthesizeUniformConfig(BaseModel):
     radius: float = 0.08
 
 
+class SynthesizeMixedConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    num_cells: int = 100
+    radius_min: float = 0.04
+    radius_max: float = 0.08
+
+
+class SynthesizeMetaBallsConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    num_cells: int = 100
+    radius_min: float = 0.04
+    radius_max: float = 0.08
+    threshold: float = 0.5
+
+
 class SynthesisConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     uniform: SynthesizeUniformConfig = SynthesizeUniformConfig()
+    mixed: SynthesizeMixedConfig = SynthesizeMixedConfig()
+    metaballs: SynthesizeMetaBallsConfig = SynthesizeMetaBallsConfig()
     base_seed: int = 123456
     resolution: int = 100
     plug_aspect: float = 0.25

@@ -15,6 +15,7 @@ from .commands.sample import (
     synthesize_uniform,
     triangulate,
 )
+from .commands.utils import max_sample_id as wim
 from .commands.utils import print_config, visualize
 
 try:
@@ -106,6 +107,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     print_config.add_parser(utils_subparsers)
     visualize.add_parser(utils_subparsers)
+    wim.add_parser(utils_subparsers)
 
     return parser
 
