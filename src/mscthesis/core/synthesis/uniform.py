@@ -60,10 +60,10 @@ def generate_voxels_from_seed(
     random_seed: int,
     resolution: int,
     plug_aspect: float,
-    num_cells: int,
-    radius: float,
     separation: float,
     max_attempts: int,
+    num_cells: int,
+    radius: float,
 ) -> tuple[np.ndarray[tuple[int, int, int]], dict[str, Any]]:
     """
     Generate uniform swiss cheese voxel model for a given random seed.
@@ -155,10 +155,10 @@ def generate_voxels_from_sample_id(
     base_seed: int,
     resolution: int,
     plug_aspect: float,
-    num_cells: int,
-    radius: float,
     separation: float,
     max_attempts: int,
+    num_cells: int,
+    radius: float,
 ) -> tuple[np.ndarray[tuple[int, int, int]], dict[str, Any]]:
     """
     Generate uniform swiss cheese voxel models for a given sample ID.
@@ -187,10 +187,10 @@ def generate_voxels_from_sample_id(
         random_seed,
         resolution,
         plug_aspect,
-        num_cells,
-        radius,
         separation,
         max_attempts,
+        num_cells,
+        radius,
     )
 
     return voxels, metadata

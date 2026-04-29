@@ -59,6 +59,8 @@ class SynthesisConfig(BaseModel):
     plug_aspect: float = 0.25
     separation: float = 0.01
     max_attempts: int = 10_000
+    num_cells_min: int = 25
+    num_cells_max: int = 200
 
 
 class TriangulationConfig(BaseModel):

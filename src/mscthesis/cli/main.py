@@ -6,6 +6,7 @@ from pathlib import Path
 
 from ..config import ProjectConfig, build_project_config
 from ..log import setup_logging
+from .commands.batch import synthesize
 from .commands.pipes import run as pipes_run
 from .commands.pipes import validate as pipes_validate
 from .commands.sample import (
@@ -108,6 +109,21 @@ def _build_parser() -> argparse.ArgumentParser:
     print_config.add_parser(utils_subparsers)
     visualize.add_parser(utils_subparsers)
     wim.add_parser(utils_subparsers)
+    #
+    # ================================================================================
+    # batch commands
+    # ================================================================================
+    #
+    batch_parser = subparsers.add_parser(
+        "batch", help="Commands for executing batches of processes"
+    )
+    batch_subparsers = batch_parser.add_subparsers(
+        dest="batch_command",
+        title="Batch Commands",
+        required=True,
+        # the envoked command is stored under args.batch_command
+    )
+    synthesize.add_parser(batch_subparsers)
 
     return parser
 

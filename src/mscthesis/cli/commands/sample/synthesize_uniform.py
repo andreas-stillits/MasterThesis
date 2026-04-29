@@ -28,10 +28,10 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
         cmdconfig.base_seed,
         cmdconfig.resolution,
         cmdconfig.plug_aspect,
-        cmdconfig.uniform.num_cells,
-        cmdconfig.uniform.radius,
         cmdconfig.separation,
         cmdconfig.max_attempts,
+        cmdconfig.uniform.num_cells,
+        cmdconfig.uniform.radius,
     )
 
     # save data
