@@ -161,6 +161,7 @@ class BaseSolver:
         transport = (
             np.abs(mesophyll_flux_sol / (1.0 - substomatal_mean) / self.plug_area)
             if substomatal_mean < 1.0 - tol
+            and substomatal_mean > self.compensation.value + tol
             else None
         )
 

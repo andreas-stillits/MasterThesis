@@ -158,6 +158,16 @@ class SolutionsPaths(PathsBase):
         return SolutionPaths(self.root.ensure(), "diffusion")
 
 
+class ScanningPaths(ProcessPaths):
+    @path_field(kind="file")
+    def scan(self) -> Path:
+        return self.root / "scan.csv"
+
+    @path_field(kind="dir")
+    def plots(self) -> Path:
+        return self.root / "plots"
+
+
 class SamplePaths(PathsBase):
     def __init__(self, base: PathLike, sample_id: str) -> None:
         super().__init__(base)
@@ -182,6 +192,10 @@ class SamplePaths(PathsBase):
     @child_paths
     def solutions(self) -> SolutionsPaths:
         return SolutionsPaths(self.root.ensure())
+
+    @child_paths
+    def scanning(self) -> ScanningPaths:
+        return ScanningPaths(self.root.ensure(), "scanning")
 
 
 # =======================================================================

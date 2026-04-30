@@ -28,7 +28,7 @@ class SynthesizeUniformConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     num_cells: int = 100
-    radius: float = 0.08
+    radius: float = 0.05
 
 
 class SynthesizeMixedConfig(BaseModel):
@@ -57,7 +57,7 @@ class SynthesisConfig(BaseModel):
     base_seed: int = 123456
     resolution: int = 100
     plug_aspect: float = 0.25
-    separation: float = 0.01
+    separation: float = 0.005
     max_attempts: int = 10_000
     num_cells_min: int = 25
     num_cells_max: int = 200
@@ -66,8 +66,8 @@ class SynthesisConfig(BaseModel):
 class TriangulationConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    smoothing_iterations: int = 5
-    elements_per_cell: int = 100
+    smoothing_iterations: int = 10
+    elements_per_cell: int = 150
     shrinkage_tolerance: float = 0.10
     spacing: tuple[float, float, float] = (1.0, 1.0, 1.0)
     freecad_cmd: str = "freecadcmd-daily"
@@ -86,7 +86,7 @@ class MeshFieldConfig(BaseModel):
     edge_dist_min: float = 0.025
     edge_dist_max: float = 0.050
     cell_min: float = 0.01
-    cell_dist_min: float = 0.01
+    cell_dist_min: float = 0.02
     cell_dist_max: float = 0.05
     inlet_min: float = 0.01
     inlet_dist_min: float = 0.10
@@ -125,6 +125,19 @@ class DiffusionSolveConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     parameters: tuple[float, ...] = (0.7, 0.2)
+
+
+class ScanningConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    transport_min: float = 0.01
+    transport_max: float = 100.0
+    transport_num: int = 10
+    absorption_min: float = 0.01
+    absorption_max: float = 100.0
+    absorption_num: int = 10
+    compensation: float = 0.1
+    preliminary_resistance: float = 1.0
 
 
 class PipesMakeConfig(BaseModel):
@@ -170,11 +183,9 @@ class ProjectConfig(BaseModel):
     meshing: MeshingConfig = MeshingConfig()
     solve_active: PhotoactiveSolveConfig = PhotoactiveSolveConfig()
     solve_diffusion: DiffusionSolveConfig = DiffusionSolveConfig()
+    scanning: ScanningConfig = ScanningConfig()
     pipes: PipesConfig = PipesConfig()
-
-    @property
-    def max_workers(self) -> int:
-        return 8
+    max_workers: int = 16
 
     def dump_json(self) -> str:
         return json.dumps(self.model_dump(), indent=4, default=str)

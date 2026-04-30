@@ -11,6 +11,7 @@ from .commands.pipes import run as pipes_run
 from .commands.pipes import validate as pipes_validate
 from .commands.sample import (
     mesh,
+    scan,
     solve_active,
     solve_diffusion,
     synthesize_uniform,
@@ -76,6 +77,7 @@ def _build_parser() -> argparse.ArgumentParser:
     mesh.add_parser(sample_subparsers)
     solve_active.add_parser(sample_subparsers)
     solve_diffusion.add_parser(sample_subparsers)
+    scan.add_parser(sample_subparsers)
     #
     # ================================================================================
     # umbrella command for ideal pipes commands

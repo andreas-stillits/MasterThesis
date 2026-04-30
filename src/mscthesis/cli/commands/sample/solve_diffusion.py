@@ -35,6 +35,10 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
     )
 
     solution, analysis = solver.solve_for(*cmdconfig.parameters)
+    chii = analysis["substomatal_mean"]
+    chit = analysis["top_mean"]
+    a_n = analysis["top_flux_grad"] / analysis["plug_area"]
+    resistance = abs((chii - chit) / a_n)
 
     # save config
     save_config(process_paths.config.path, config, "solve_diffusion", "solver_ctx")
@@ -48,6 +52,7 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
         outputs={"solution": process_paths.solution.path},
         metadata={
             "parameters": cmdconfig.parameters,
+            "resistance": resistance,
             **analysis,
         },
         tool_version=config.meta.project_version,
