@@ -8,7 +8,7 @@ from typing import Any
 import numpy as np
 from stillib_parallelism import collect, print_progress
 
-from ....config import ProjectConfig, SynthesisConfig, save_config
+from ....config import ProjectConfig
 from ....core.io import save_voxels
 from ....core.synthesis.uniform import (
     generate_voxels_from_sample_id as uniform_from_sample_id,
@@ -23,7 +23,7 @@ class Task:
     index: int
     sample_id: str
     synthesis_type: str
-    parameters: dict[str, Any]
+    num_cells: int
 
 
 def make_tasks(
@@ -39,25 +39,17 @@ def make_tasks(
         num_samples,
         dtype=int,
     )
-    synthesis_dict = config.synthesis.model_dump()
     for idx in range(num_samples):
         sample_id = int(start_sample_id) + idx
-        sample_id = str(sample_id).zfill(config.behavior.sample_id_digits)
-        sample_id = validate_sample_id(
-            sample_id, required_digits=config.behavior.sample_id_digits
-        )
-        blacklist = ["uniform", "mixed", "metaballs", "num_cells_min", "num_cells_max"]
-        parameters = {
-            key: value for key, value in synthesis_dict.items() if key not in blacklist
-        }
-        parameters.update(synthesis_dict[synthesis_type])
-        parameters["num_cells"] = num_cells[idx]
+        digits = config.behavior.sample_id_digits
+        sample_id = str(sample_id).zfill(digits)
+        sample_id = validate_sample_id(sample_id, digits)
         tasks.append(
             Task(
                 idx,
                 sample_id,
                 synthesis_type,
-                parameters,
+                num_cells[idx],
             )
         )
     return tasks
@@ -70,12 +62,14 @@ def initialize_worker(config: ProjectConfig) -> None:
     global _STATE
     paths = ProjectPaths(config.behavior.storage_root)
     _STATE = {
+        "config": config,
         "paths": paths,
     }
 
 
 def execute_task(task: Task) -> None:
     global _STATE
+    config: ProjectConfig = _STATE["config"]
     paths: ProjectPaths = _STATE["paths"]
     sample_paths = paths.sample(task.sample_id)
     process_paths = sample_paths.synthesis
@@ -84,17 +78,26 @@ def execute_task(task: Task) -> None:
     if task.synthesis_type == "uniform":
         voxels, metadata = uniform_from_sample_id(
             task.sample_id,
-            **task.parameters,
+            config.synthesis.base_seed,
+            config.synthesis.resolution,
+            config.synthesis.plug_aspect,
+            config.synthesis.separation,
+            config.synthesis.max_attempts,
+            task.num_cells,
+            config.synthesis.uniform.radius,
         )
 
         # save data
         save_voxels(process_paths.voxels.path, voxels)
 
         # save config
-        # process_paths.config.path.write_text(
-        #     json.dumps(task.config.model_dump(), indent=4, default=str),
-        #     encoding="utf-8",
-        # )
+        config_dict = config.model_dump()
+        synthesis_dict = config_dict["synthesis"]
+        synthesis_dict["uniform"]["num_cells"] = task.num_cells
+        process_paths.config.path.write_text(
+            json.dumps(synthesis_dict, indent=4, default=str),
+            encoding="utf-8",
+        )
 
         # save manifest
         dump_manifest(
@@ -104,7 +107,7 @@ def execute_task(task: Task) -> None:
             inputs={},
             outputs={"voxels": process_paths.voxels.path},
             metadata=metadata,
-            tool_version=ProjectConfig().meta.project_version,
+            tool_version=config.meta.project_version,
         )
 
     elif task.synthesis_type == "mixed" or task.synthesis_type == "metaballs":
@@ -119,7 +122,7 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
     """Command function for the batch synthesize command."""
 
     start_sample_id: str = validate_sample_id(
-        args.start_sample_id, required_digits=config.behavior.sample_id_digits
+        args.start_sample_id, config.behavior.sample_id_digits
     )
 
     tasks = make_tasks(
@@ -132,7 +135,7 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
     _ = collect(
         tasks,
         execute_task,
-        max_workers=8,
+        max_workers=config.max_workers,
         initializer=initialize_worker,
         initargs=(config,),
         progress_callback=print_progress,

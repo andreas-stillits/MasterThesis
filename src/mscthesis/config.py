@@ -172,6 +172,10 @@ class ProjectConfig(BaseModel):
     solve_diffusion: DiffusionSolveConfig = DiffusionSolveConfig()
     pipes: PipesConfig = PipesConfig()
 
+    @property
+    def max_workers(self) -> int:
+        return 8
+
     def dump_json(self) -> str:
         return json.dumps(self.model_dump(), indent=4, default=str)
 

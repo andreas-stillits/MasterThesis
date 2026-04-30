@@ -126,7 +126,7 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
     report = collect(
         tasks,
         execute_task,
-        max_workers=4,
+        max_workers=config.max_workers,
         initializer=initialize_worker,
         initargs=(args.force,),
         progress_callback=print_progress,

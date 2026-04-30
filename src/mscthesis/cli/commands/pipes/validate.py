@@ -78,7 +78,6 @@ def execute_task(task: Task) -> list[dict[str, Any]] | None:
     # solve diffusion if not already done or if force is True
     results = paths.results
     if not results.exists() or force:
-
         qois: list[dict[str, Any]] = []
 
         mesh_ctx: MeshContext = load_volumetric_mesh(mesh.require())
@@ -129,7 +128,7 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
     report = collect(
         tasks,
         execute_task,
-        max_workers=8,
+        max_workers=config.max_workers,
         initializer=initialize_worker,
         initargs=(args.force, args.tag),
         progress_callback=print_progress,
