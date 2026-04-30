@@ -185,7 +185,7 @@ class ProjectConfig(BaseModel):
     solve_diffusion: DiffusionSolveConfig = DiffusionSolveConfig()
     scanning: ScanningConfig = ScanningConfig()
     pipes: PipesConfig = PipesConfig()
-    max_workers: int = 16
+    max_workers: int = 8
 
     def dump_json(self) -> str:
         return json.dumps(self.model_dump(), indent=4, default=str)

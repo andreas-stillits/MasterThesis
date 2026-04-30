@@ -5,7 +5,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from stillib_plotting import figure, label_panel, save, set_axis_labels, use_style
+from stillib_plotting import figure, save, set_axis_labels, use_style
 
 
 def _npy(df: pd.DataFrame, column: str) -> np.ndarray:
@@ -26,6 +26,10 @@ def plot_scanning_results(
     variation = np.sqrt(_npy(df, "mesophyll_var")) / chim
     a_n = _npy(df, "mesophyll_flux_sol") / _npy(df, "plug_area")
     resistance = (chii - chim) / a_n
+    a_n_substomatal = _npy(df, "assimilation_substomatal") / _npy(df, "plug_area")
+    a_n_mesophyll = _npy(df, "assimilation_mesophyll_mean") / _npy(df, "plug_area")
+    error_substomatal = (a_n_substomatal - a_n) / a_n
+    error_mesophyll = (a_n_mesophyll - a_n) / a_n
 
     def _set_labels(ax: plt.Axes) -> None:  # type: ignore
         ax.set_xscale("log")
@@ -64,13 +68,40 @@ def plot_scanning_results(
     plt.colorbar(sc, ax=ax4, label=r"Coefficient of Variation $\delta_m$")
     _set_labels(ax4)
 
+    # C = Ci simplification plot
+    fig5, ax5 = figure(size="single")
+    sc = ax5.scatter(
+        absorption,
+        transport,
+        c=error_substomatal,
+        cmap="inferno",
+        marker="o",
+        s=100,
+    )
+    plt.colorbar(sc, ax=ax5, label=r"Error in $A_N$ from $C = C_i$")
+    _set_labels(ax5)
+
+    # C = <C_m> simplification plot
+    fig6, ax6 = figure(size="single")
+    sc = ax6.scatter(
+        absorption,
+        transport,
+        c=error_mesophyll,
+        cmap="inferno",
+        marker="o",
+        s=100,
+    )
+    plt.colorbar(sc, ax=ax6, label=r"Error in $A_N$ from $C = \langle C \rangle_m$")
+    _set_labels(ax6)
+
     if output_dir is not None:
         out = Path(output_dir)
         save(fig1, out / "resistance.pdf")
         save(fig2, out / "substomatal.pdf")
         save(fig3, out / "mesophyll.pdf")
         save(fig4, out / "variation.pdf")
-
+        save(fig5, out / "error_substomatal.pdf")
+        save(fig6, out / "error_mesophyll.pdf")
     if show:
         plt.show()
     return

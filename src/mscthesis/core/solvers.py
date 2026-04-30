@@ -164,6 +164,18 @@ class BaseSolver:
             and substomatal_mean > self.compensation.value + tol
             else None
         )
+        # photoactive simplified assumptions predictions
+        assimilation_substomatal = 0.0
+        assimilation_mesophyll_mean = 0.0
+        if self.mesophyll_area > 0.0:
+            assimilation_substomatal = _integral(
+                self.surface_coeff * (substomatal_mean - self.compensation),  # type: ignore
+                self.ds(self.tags.MESOPHYLL),
+            )
+            assimilation_mesophyll_mean = _integral(
+                self.surface_coeff * (mesophyll_mean - self.compensation),  # type: ignore
+                self.ds(self.tags.MESOPHYLL),
+            )
 
         return {
             "stomatal_flux_grad": stomatal_flux_grad,
@@ -187,6 +199,8 @@ class BaseSolver:
             "stomatal_area_fraction": self.stomatal_area_fraction,
             "mesophyll_area_fraction": self.mesophyll_area_fraction,
             "porosity": self.porosity,
+            "assimilation_substomatal": assimilation_substomatal,
+            "assimilation_mesophyll_mean": assimilation_mesophyll_mean,
         }
 
     def solve_for(self, *args, **kwargs) -> tuple[fem.Function, dict[str, Any]]:
