@@ -19,7 +19,7 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
     # prepare paths
     paths = ProjectPaths(config.behavior.storage_root).sample(sample_id)
 
-    process_paths = paths.meshing
+    process_paths = paths.meshing()
     process_paths.root.ensure()
 
     airspace_tag, plug_aspect = build_sample_model(

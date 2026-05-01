@@ -192,17 +192,26 @@ class SamplePaths(PathsBase):
     def triangulation(self) -> TriangulationPaths:
         return TriangulationPaths(self.root.ensure(), "triangulation")
 
-    def meshing(self, specifier: int = 0) -> MeshPaths:
-        meshing_root = self.root / "meshing"
-        return MeshPaths(meshing_root, f"mesh_{specifier:{self.format}}")
+    def meshing(self, specifier: int | None = None) -> MeshPaths:
+        if specifier is None:
+            return MeshPaths(self.root.ensure(), "meshing")
+        elif isinstance(specifier, int):
+            return MeshPaths(self.root / "meshing", f"mesh_{specifier:{self.format}}")
 
-    def solutions(self, specifier: int = 0) -> SolutionsPaths:
-        solutions_root = self.root / "solutions"
-        return SolutionsPaths(solutions_root, f"solutions_{specifier:{self.format}}")
+    def solutions(self, specifier: int | None = None) -> SolutionsPaths:
+        if specifier is None:
+            return SolutionsPaths(self.root.ensure(), "solutions")
+        elif isinstance(specifier, int):
+            return SolutionsPaths(
+                self.root / "solutions", f"solutions_{specifier:{self.format}}"
+            )
 
-    def scanning(self, specifier: int = 0) -> ScanningPaths:
-        scanning_root = self.root / "scanning"
-        return ScanningPaths(scanning_root, f"scanning_{specifier:{self.format}}")
+    def scanning(self, specifier: int | None = None) -> ScanningPaths:
+        if specifier is None:
+            return ScanningPaths(self.root.ensure(), "scanning")
+        elif isinstance(specifier, int):
+            scanning_root = self.root / "scanning"
+            return ScanningPaths(scanning_root, f"scanning_{specifier:{self.format}}")
 
 
 class CandidatePaths(PathsBase):

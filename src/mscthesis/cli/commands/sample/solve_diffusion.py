@@ -24,10 +24,10 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
     # prepare paths
     paths = ProjectPaths(config.behavior.storage_root).sample(sample_id)
 
-    process_paths = paths.solutions.diffusion
+    process_paths = paths.solutions().diffusion
     process_paths.root.ensure()
 
-    mesh_ctx: MeshContext = load_volumetric_mesh(paths.meshing.mesh.require())
+    mesh_ctx: MeshContext = load_volumetric_mesh(paths.meshing().mesh.require())
 
     solver = DiffusionSolver(
         SolverContext(**config.solver_ctx.model_dump()),
@@ -48,7 +48,7 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
         process_paths.manifest.path,
         command_name="solve-diffusion",
         sample_id=sample_id,
-        inputs={"mesh": paths.meshing.mesh.path},
+        inputs={"mesh": paths.meshing().mesh.path},
         outputs={"solution": process_paths.solution.path},
         metadata={
             "parameters": cmdconfig.parameters,

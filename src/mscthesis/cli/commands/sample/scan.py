@@ -72,7 +72,7 @@ def intializer(config: ProjectConfig, sample_id: str) -> None:
     paths = ProjectPaths(config.behavior.storage_root)
     solver_ctx = SolverContext(**config.solver_ctx.model_dump())
     mesh_ctx: MeshContext = load_volumetric_mesh(
-        paths.sample(sample_id).meshing.mesh.require()
+        paths.sample(sample_id).meshing().mesh.require()
     )
     solver = PhotoactiveSolver(solver_ctx, mesh_ctx)
     _STATE["solver"] = solver
@@ -108,7 +108,7 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
     # prepare paths
     paths = ProjectPaths(config.behavior.storage_root).sample(sample_id)
 
-    process_paths = paths.scanning
+    process_paths = paths.scanning()
     process_paths.root.ensure()
 
     if not args.skip:
@@ -136,7 +136,7 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
             process_paths.manifest.path,
             command_name="scan",
             sample_id=sample_id,
-            inputs={"mesh": paths.meshing.mesh.path},
+            inputs={"mesh": paths.meshing().mesh.path},
             outputs={"scan": process_paths.scan.path},
             metadata={
                 "num_simulations": len(aggregate),
