@@ -35,17 +35,17 @@ class SynthesizeMixedConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     num_cells: int = 200
-    radius_min: float = 0.05
-    radius_max: float = 0.08
+    radius_min: float = 0.04
+    radius_max: float = 0.10
 
 
 class SynthesizeMetaBallsConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    num_cells: int = 100
+    num_cells: int = 200
     radius_min: float = 0.04
-    radius_max: float = 0.08
-    threshold: float = 2.0
+    radius_max: float = 0.06
+    threshold: float = 4.2
 
 
 class SynthesisConfig(BaseModel):
@@ -79,7 +79,7 @@ class TriangulationConfig(BaseModel):
 class MeshFieldConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    stomatal_aspect: float = 0.05
+    stomatal_aspect: float = 0.20
     scale_factor: float = 1.0
     global_max_num: int = 25
     edge_min_num: int = 50
@@ -88,8 +88,8 @@ class MeshFieldConfig(BaseModel):
     cell_min: float = 0.01
     cell_dist_min: float = 0.02
     cell_dist_max: float = 0.05
-    inlet_min: float = 0.01
-    inlet_dist_min: float = 0.10
+    inlet_min: float = 0.008
+    inlet_dist_min: float = 0.08
     inlet_dist_max: float = 0.50
     atol: float = 0.005
 
@@ -98,7 +98,7 @@ class MeshingConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     mesh_field: MeshFieldConfig = MeshFieldConfig()
-    boundary_margin: float = 0.05
+    boundary_margin: float = 0.02
     substomatal_margin: float = 0.05
     atol: float = 0.005
 
