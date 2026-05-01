@@ -132,7 +132,7 @@ class TriangulationPaths(ProcessPaths):
         return self.root / "cad_model.brep"
 
 
-class MeshingPaths(ProcessPaths):
+class MeshPaths(ProcessPaths):
     @path_field(kind="file")
     def mesh(self) -> Path:
         return self.root / "mesh.msh"
@@ -145,9 +145,14 @@ class SolutionPaths(ProcessPaths):
 
 
 class SolutionsPaths(PathsBase):
+    def __init__(self, base: PathLike, name: str) -> None:
+        super().__init__(base)
+        self.name = name
+        return
+
     @path_field(kind="dir")
     def root(self) -> Path:
-        return self.base / "solutions"
+        return self.base / self.name
 
     @child_paths
     def photoactive(self) -> SolutionPaths:
@@ -172,6 +177,8 @@ class SamplePaths(PathsBase):
     def __init__(self, base: PathLike, sample_id: str) -> None:
         super().__init__(base)
         self.sample_id = sample_id
+        self.format = "03d"
+        return
 
     @path_field(kind="dir")
     def root(self) -> Path:
@@ -185,17 +192,32 @@ class SamplePaths(PathsBase):
     def triangulation(self) -> TriangulationPaths:
         return TriangulationPaths(self.root.ensure(), "triangulation")
 
-    @child_paths
-    def meshing(self) -> MeshingPaths:
-        return MeshingPaths(self.root.ensure(), "meshing")
+    def meshing(self, specifier: int = 0) -> MeshPaths:
+        meshing_root = self.root / "meshing"
+        return MeshPaths(meshing_root, f"mesh_{specifier:{self.format}}")
+
+    def solutions(self, specifier: int = 0) -> SolutionsPaths:
+        solutions_root = self.root / "solutions"
+        return SolutionsPaths(solutions_root, f"solutions_{specifier:{self.format}}")
+
+    def scanning(self, specifier: int = 0) -> ScanningPaths:
+        scanning_root = self.root / "scanning"
+        return ScanningPaths(scanning_root, f"scanning_{specifier:{self.format}}")
+
+
+class CandidatePaths(PathsBase):
+    def __init__(self, base: PathLike, sample_id: str) -> None:
+        super().__init__(base)
+        self.sample_id = sample_id
+        return
+
+    @path_field(kind="dir")
+    def root(self) -> Path:
+        return self.base / self.sample_id
 
     @child_paths
-    def solutions(self) -> SolutionsPaths:
-        return SolutionsPaths(self.root.ensure())
-
-    @child_paths
-    def scanning(self) -> ScanningPaths:
-        return ScanningPaths(self.root.ensure(), "scanning")
+    def synthesis(self) -> SynthesisPaths:
+        return SynthesisPaths(self.root.ensure(), "synthesis")
 
 
 # =======================================================================
@@ -212,5 +234,19 @@ class ProjectPaths(PathsBase):
     def samples(self) -> Path:
         return self.base / "samples"
 
+    @path_field(kind="dir")
+    def candidates(self) -> Path:
+        return self.base / "candidates"
+
+    @path_field(kind="dir")
+    def selected(self) -> Path:
+        return self.base / "selected"
+
     def sample(self, sample_id: str) -> SamplePaths:
         return SamplePaths(self.samples.ensure(), sample_id)
+
+    def candidate_sample(self, sample_id: str) -> CandidatePaths:
+        return CandidatePaths(self.candidates.ensure(), sample_id)
+
+    def selected_sample(self, sample_id: str) -> SamplePaths:
+        return SamplePaths(self.selected.ensure(), sample_id)
