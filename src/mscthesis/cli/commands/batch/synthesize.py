@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
@@ -10,12 +10,15 @@ from stillib_parallelism import collect, print_progress
 
 from ....config import ProjectConfig
 from ....core.io import save_voxels
+from ....core.synthesis.mixed import (
+    generate_voxels_from_sample_id as mixed_from_sample_id,
+)
 from ....core.synthesis.uniform import (
     generate_voxels_from_sample_id as uniform_from_sample_id,
 )
 from ....ids import validate_sample_id
 from ....manifest import dump_manifest
-from ....paths import ProjectPaths
+from ....paths import ProjectPaths, SynthesisPaths
 
 
 @dataclass
@@ -75,6 +78,34 @@ def execute_task(task: Task) -> None:
     process_paths = sample_paths.synthesis
     process_paths.root.ensure()
 
+    def _save(
+        voxels: np.ndarray,
+        metadata: dict[str, Any],
+        process_paths: SynthesisPaths,
+        synthesis_type: str,
+    ) -> None:
+        # save data
+        save_voxels(process_paths.voxels.path, voxels)
+        # save config
+        config_dict = config.model_dump()
+        synthesis_dict = config_dict["synthesis"]
+        synthesis_dict[synthesis_type]["num_cells"] = task.num_cells
+        process_paths.config.path.write_text(
+            json.dumps(synthesis_dict, indent=4, default=str),
+            encoding="utf-8",
+        )
+        # save manifest
+        dump_manifest(
+            process_paths.manifest.path,
+            command_name=f"synthesize-{synthesis_type}",
+            sample_id=task.sample_id,
+            inputs={},
+            outputs={"voxels": process_paths.voxels.path},
+            metadata=metadata,
+            tool_version=config.meta.project_version,
+        )
+        return
+
     if task.synthesis_type == "uniform":
         voxels, metadata = uniform_from_sample_id(
             task.sample_id,
@@ -86,32 +117,25 @@ def execute_task(task: Task) -> None:
             task.num_cells,
             config.synthesis.uniform.radius,
         )
+        _save(voxels, metadata, process_paths, "uniform")
 
-        # save data
-        save_voxels(process_paths.voxels.path, voxels)
-
-        # save config
-        config_dict = config.model_dump()
-        synthesis_dict = config_dict["synthesis"]
-        synthesis_dict["uniform"]["num_cells"] = task.num_cells
-        process_paths.config.path.write_text(
-            json.dumps(synthesis_dict, indent=4, default=str),
-            encoding="utf-8",
+    elif task.synthesis_type == "mixed":
+        voxels, metadata = mixed_from_sample_id(
+            task.sample_id,
+            config.synthesis.base_seed,
+            config.synthesis.resolution,
+            config.synthesis.plug_aspect,
+            config.synthesis.separation,
+            config.synthesis.max_attempts,
+            task.num_cells,
+            config.synthesis.mixed.radius_min,
+            config.synthesis.mixed.radius_max,
         )
+        _save(voxels, metadata, process_paths, "mixed")
 
-        # save manifest
-        dump_manifest(
-            process_paths.manifest.path,
-            command_name=f"synthesize-{task.synthesis_type}",
-            sample_id=task.sample_id,
-            inputs={},
-            outputs={"voxels": process_paths.voxels.path},
-            metadata=metadata,
-            tool_version=config.meta.project_version,
-        )
+    elif task.synthesis_type == "metaballs":
+        raise NotImplementedError("Metaballs synthesis is not implemented yet.")
 
-    elif task.synthesis_type == "mixed" or task.synthesis_type == "metaballs":
-        pass
     else:
         raise ValueError(f"Invalid synthesis type: {task.synthesis_type}")
 
