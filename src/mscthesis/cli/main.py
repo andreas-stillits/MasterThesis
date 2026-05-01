@@ -14,6 +14,7 @@ from .commands.sample import (
     scan,
     solve_active,
     solve_diffusion,
+    synthesize_mixed,
     synthesize_uniform,
     triangulate,
 )
@@ -73,6 +74,7 @@ def _build_parser() -> argparse.ArgumentParser:
         # the envoked command is stored under args.sample_command
     )
     synthesize_uniform.add_parser(sample_subparsers)
+    synthesize_mixed.add_parser(sample_subparsers)
     triangulate.add_parser(sample_subparsers)
     mesh.add_parser(sample_subparsers)
     solve_active.add_parser(sample_subparsers)

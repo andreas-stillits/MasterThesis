@@ -37,8 +37,10 @@ def _metadata(
     metadata["random_seed"] = random_seed
     metadata["plug_aspect"] = plug_aspect
     metadata["num_cells_placed"] = len(centers)
-    metadata["radius"] = float(np.mean(radii)) if len(radii) > 0 else 0.0
-    metadata["cell_volume"] = (
+    metadata["min_radius"] = float(np.min(radii)) if len(radii) > 0 else 0.0
+    metadata["mean_radius"] = float(np.mean(radii)) if len(radii) > 0 else 0.0
+    metadata["max_radius"] = float(np.max(radii)) if len(radii) > 0 else 0.0
+    metadata["mean_cell_volume"] = (
         float(np.mean([(4 / 3) * np.pi * r**3 for r in radii]))  # type: ignore
         if len(radii) > 0
         else 0.0
@@ -50,7 +52,7 @@ def _metadata(
     metadata["mesophyll_area_fraction"] = float(
         len(centers) * 4 * np.sum(radii**2) / plug_aspect**2
     )
-    metadata["type"] = "uniform"
+    metadata["type"] = "mixed"
     return metadata
 
 
@@ -62,7 +64,8 @@ def generate_voxels_from_seed(
     separation: float,
     max_attempts: int,
     num_cells: int,
-    radius: float,
+    radius_min: float,
+    radius_max: float,
 ) -> tuple[np.ndarray[tuple[int, int, int]], dict[str, Any]]:
     """
     Generate uniform swiss cheese voxel model for a given random seed.
@@ -74,7 +77,8 @@ def generate_voxels_from_seed(
         separation (float): Minimum separation distance between cells and boundaries.
         max_attempts (int): Maximum number of attempts to place each cell.
         num_cells (int): Number of cells (spheres) to place in the model.
-        radius (float): Radius of the cells (spheres).
+        radius_min (float): Minimum radius of the cells (spheres).
+        radius_max (float): Maximum radius of the cells (spheres).
     Returns:
         np.ndarray: 3D numpy array of shape (planar_resolution, planar_resolution, resolution).
         dict[str, Any]: Metadata dictionary.
@@ -87,13 +91,13 @@ def generate_voxels_from_seed(
     # initialize cell lists and determine placement boundaries
     centers = np.zeros((num_cells, 3))
     radii = np.zeros((num_cells,))
-    max_r = plug_aspect - radius - separation
-    min_z = radius + separation
-    max_z = 1 - radius - separation
+    max_r = plug_aspect - radius_min - separation
+    min_z = radius_min + separation
+    max_z = 1 - radius_min - separation
 
     if max_r <= 0:
         raise ValueError(
-            f"Cell size {radius} and separation {separation} too large for given plug aspect {plug_aspect}."
+            f"Cell size {radius_min} and separation {separation} too large for given plug aspect {plug_aspect}."
         )
 
     # placement of cells
@@ -109,12 +113,21 @@ def generate_voxels_from_seed(
                 ]
             )
 
+            # draw random cell radius
+            radius = rng.uniform(radius_min, radius_max)
+
             # enforce cyllindrical boundary
-            if np.linalg.norm(center[:2]) > max_r:
+            if np.linalg.norm(center[:2]) + radius - radius_min > max_r:
+                attempts += 1
+                continue
+            if (
+                center[2] + radius - radius_min > max_z
+                or center[2] - radius + radius_min < min_z
+            ):
                 attempts += 1
                 continue
 
-            # draw random cell radius and check for overlaps
+            # check for overlaps
             if np.all(
                 np.linalg.norm(centers[:i] - center, axis=1)
                 > (radii[:i] + radius + separation)
@@ -157,7 +170,8 @@ def generate_voxels_from_sample_id(
     separation: float,
     max_attempts: int,
     num_cells: int,
-    radius: float,
+    radius_min: float,
+    radius_max: float,
 ) -> tuple[np.ndarray[tuple[int, int, int]], dict[str, Any]]:
     """
     Generate uniform swiss cheese voxel models for a given sample ID.
@@ -170,7 +184,8 @@ def generate_voxels_from_sample_id(
         separation (float): Minimum separation distance between cells and boundaries.
         max_attempts (int): Maximum attempts to place each cell without overlap.
         num_cells (int): Number of cells (spheres) to place in the model.
-        radius (float): Radius of the cells.
+        radius_min (float): Minimum radius of the cells.
+        radius_max (float): Maximum radius of the cells.
 
     Returns:
         np.ndarray: 3D numpy array of shape (planar_resolution, planar_resolution, resolution)
@@ -189,7 +204,8 @@ def generate_voxels_from_sample_id(
         separation,
         max_attempts,
         num_cells,
-        radius,
+        radius_min,
+        radius_max,
     )
 
     return voxels, metadata

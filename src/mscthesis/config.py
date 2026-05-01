@@ -28,14 +28,14 @@ class SynthesizeUniformConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     num_cells: int = 100
-    radius: float = 0.05
+    radius: float = 0.08
 
 
 class SynthesizeMixedConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    num_cells: int = 100
-    radius_min: float = 0.04
+    num_cells: int = 200
+    radius_min: float = 0.05
     radius_max: float = 0.08
 
 
