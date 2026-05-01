@@ -45,7 +45,7 @@ def _metadata(
         if len(radii) > 0
         else 0.0
     )
-    metadata["mean_porosity"] = 1.0 - float(np.sum(voxels) / voxels.size)
+    metadata["mean_porosity"] = 1.0 - float(np.sum(voxels) / (np.pi / 4 * voxels.size))
     metadata["std_porosity"] = float(
         np.std(1.0 - np.sum(voxels, axis=(0, 1)) / (voxels.shape[0] * voxels.shape[1]))
     )

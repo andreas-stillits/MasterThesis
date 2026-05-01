@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Literal
+
 import numpy as np
 
 from ...log import log_call
@@ -24,6 +26,7 @@ def get_sample_seed(base_seed: int, sample_id: str) -> int:
 def initialize_meshgrid(
     plug_aspect: float,
     resolution: int,
+    dtype: Literal["unit8", "float32"] = "unit8",
 ) -> tuple[np.ndarray[tuple[int, int, int]], tuple[np.ndarray, np.ndarray, np.ndarray]]:
     """
     Initialize a 3D meshgrid for voxel generation.
@@ -43,8 +46,11 @@ def initialize_meshgrid(
     X, Y, Z = np.meshgrid(x, y, z, indexing="ij")
 
     # initialize empty voxels
+    datatype = (
+        np.uint8 if dtype == "unit8" else np.float32 if dtype == "float32" else None
+    )
     voxels = np.zeros(
-        (planar_resolution, planar_resolution, resolution), dtype=np.uint8
+        (planar_resolution, planar_resolution, resolution), dtype=datatype
     )
 
     return voxels, (X, Y, Z)

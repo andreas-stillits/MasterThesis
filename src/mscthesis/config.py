@@ -45,7 +45,7 @@ class SynthesizeMetaBallsConfig(BaseModel):
     num_cells: int = 100
     radius_min: float = 0.04
     radius_max: float = 0.08
-    threshold: float = 0.5
+    threshold: float = 2.0
 
 
 class SynthesisConfig(BaseModel):
