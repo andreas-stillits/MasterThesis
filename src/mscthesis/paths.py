@@ -255,6 +255,10 @@ class ProjectPaths(PathsBase):
     def selected(self) -> Path:
         return self.base / "selected"
 
+    @path_field(kind="file")
+    def index(self) -> Path:
+        return self.base / "index.csv"
+
     def sample(self, sample_id: str) -> SamplePaths:
         return SamplePaths(self.samples.ensure(), sample_id)
 

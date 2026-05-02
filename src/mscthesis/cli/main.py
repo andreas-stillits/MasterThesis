@@ -18,7 +18,7 @@ from .commands.sample import (
     synthesize_uniform,
     triangulate,
 )
-from .commands.search import gen_candidates
+from .commands.search import compile_candidates, gen_candidates
 from .commands.utils import max_sample_id as wim
 from .commands.utils import print_config, visualize
 
@@ -130,7 +130,7 @@ def _build_parser() -> argparse.ArgumentParser:
         # the envoked command is stored under args.search_command
     )
     gen_candidates.add_parser(search_subparsers)
-
+    compile_candidates.add_parser(search_subparsers)
     return parser
 
 
