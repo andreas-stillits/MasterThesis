@@ -14,7 +14,6 @@ from .utils import (
 
 @log_call()
 def _metadata(
-    random_seed: int,
     plug_aspect: float,
     centers: np.ndarray,
     radii: np.ndarray,
@@ -34,7 +33,6 @@ def _metadata(
         dict[str, Any]: Metadata dictionary.
     """
     metadata: dict[str, Any] = {}
-    metadata["random_seed"] = random_seed
     metadata["plug_aspect"] = plug_aspect
     metadata["num_cells_placed"] = len(centers)
     metadata["min_radius"] = float(np.min(radii)) if len(radii) > 0 else 0.0
@@ -151,7 +149,6 @@ def generate_voxels_from_seed(
     radii = radii[radii > 0]
 
     metadata = _metadata(
-        random_seed,
         plug_aspect,
         centers,
         radii,
@@ -206,6 +203,96 @@ def generate_voxels_from_sample_id(
         num_cells,
         radius_min,
         radius_max,
+    )
+
+    return voxels, metadata
+
+
+# ================================================================================
+#                              SEARCH FUNCTIONALITY
+# ================================================================================
+
+
+def generate_voxels_from_rng(
+    rng: np.random.Generator,
+    resolution: int,
+    plug_aspect: float,
+    separation: float,
+    max_attempts: int,
+    num_cells: int,
+    radius_min: float,
+    radius_max: float,
+) -> tuple[np.ndarray[tuple[int, int, int]], dict[str, Any]]:
+
+    voxels, (X, Y, Z) = initialize_meshgrid(plug_aspect, resolution)
+
+    # initialize cell lists and determine placement boundaries
+    centers = np.zeros((num_cells, 3))
+    radii = np.zeros((num_cells,))
+    max_r = plug_aspect - radius_min - separation
+    min_z = radius_min + separation
+    max_z = 1 - radius_min - separation
+
+    if max_r <= 0:
+        raise ValueError(
+            f"Cell size {radius_min} and separation {separation} too large for given plug aspect {plug_aspect}."
+        )
+
+    # placement of cells
+    for i in range(num_cells):
+        attempts = 0
+        while attempts < max_attempts:
+            # draw random cell center
+            center = np.array(
+                [
+                    rng.uniform(-max_r, max_r),
+                    rng.uniform(-max_r, max_r),
+                    rng.uniform(min_z, max_z),
+                ]
+            )
+
+            # draw random cell radius
+            radius = rng.uniform(radius_min, radius_max)
+
+            # enforce cyllindrical boundary
+            if np.linalg.norm(center[:2]) + radius - radius_min > max_r:
+                attempts += 1
+                continue
+            if (
+                center[2] + radius - radius_min > max_z
+                or center[2] - radius + radius_min < min_z
+            ):
+                attempts += 1
+                continue
+
+            # check for overlaps
+            if np.all(
+                np.linalg.norm(centers[:i] - center, axis=1)
+                > (radii[:i] + radius + separation)
+            ):
+                centers[i] = center
+                radii[i] = radius
+                break
+            attempts += 1
+
+        else:  # executed only if while loop is not stopped by break - then we dont attempt to place any further spheres
+            break  # break out of the for loop
+
+        # compute distance field and update voxels
+        distance = np.sqrt(
+            (X - center[0]) ** 2 + (Y - center[1]) ** 2 + (Z - center[2]) ** 2
+        )
+        voxels |= (distance <= radius).astype(np.uint8)
+
+    # remove cells where radius is still zero (not placed)
+    centers = centers[radii > 0]
+    radii = radii[radii > 0]
+
+    metadata = _metadata(
+        plug_aspect,
+        centers,
+        radii,
+        voxels,
     )
 
     return voxels, metadata

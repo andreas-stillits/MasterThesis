@@ -6,7 +6,6 @@ from pathlib import Path
 
 from ..config import ProjectConfig, build_project_config
 from ..log import setup_logging
-from .commands.batch import synthesize
 from .commands.pipes import run as pipes_run
 from .commands.pipes import validate as pipes_validate
 from .commands.sample import (
@@ -19,6 +18,7 @@ from .commands.sample import (
     synthesize_uniform,
     triangulate,
 )
+from .commands.search import gen_candidates
 from .commands.utils import max_sample_id as wim
 from .commands.utils import print_config, visualize
 
@@ -120,16 +120,16 @@ def _build_parser() -> argparse.ArgumentParser:
     # batch commands
     # ================================================================================
     #
-    batch_parser = subparsers.add_parser(
-        "batch", help="Commands for executing batches of processes"
+    search_parser = subparsers.add_parser(
+        "search", help="Commands for searching and selecting optimal configurations"
     )
-    batch_subparsers = batch_parser.add_subparsers(
-        dest="batch_command",
-        title="Batch Commands",
+    search_subparsers = search_parser.add_subparsers(
+        dest="search_command",
+        title="Search Commands",
         required=True,
-        # the envoked command is stored under args.batch_command
+        # the envoked command is stored under args.search_command
     )
-    synthesize.add_parser(batch_subparsers)
+    gen_candidates.add_parser(search_subparsers)
 
     return parser
 

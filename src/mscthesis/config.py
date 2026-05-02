@@ -177,6 +177,10 @@ class PipesConfig(BaseModel):
 class CandidateConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    num_cells_set: list[int] = [25, 50, 100, 150, 200]
+    radius_center_set: list[float] = [0.04, 0.06, 0.08, 0.10]
+    radius_width: float = 0.02
+
 
 class SelectedConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -185,7 +189,7 @@ class SelectedConfig(BaseModel):
 class SearchConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    plug_aspect_grid: dict[int, float] = {
+    plug_aspect_set: dict[int, float] = {
         0: 0.10,
         1: 0.15,
         2: 0.20,

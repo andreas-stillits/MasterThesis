@@ -121,6 +121,10 @@ class SynthesisPaths(ProcessPaths):
     def voxels(self) -> Path:
         return self.root / "voxels.npy"
 
+    @path_field(kind="file")
+    def snapshot(self) -> Path:
+        return self.root / "rng_snapshot.json"
+
 
 class TriangulationPaths(ProcessPaths):
     @path_field(kind="file")
