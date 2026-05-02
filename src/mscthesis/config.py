@@ -185,6 +185,8 @@ class CandidateConfig(BaseModel):
 class SelectedConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    porosity_gridsize: float = 0.10
+
 
 class SearchConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")

@@ -30,7 +30,7 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
             mesh = load_surface_mesh(path)
             visualize_surface_mesh(mesh)
         elif name == "mesh":
-            path = paths.sample(sample_id).meshing.mesh.require()
+            path = paths.sample(sample_id).meshing().mesh.require()
             visualize_volumetric_mesh(path)
         else:
             raise ValueError(f"Unsupported object name: {name}")

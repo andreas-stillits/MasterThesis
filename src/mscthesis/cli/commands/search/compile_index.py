@@ -1,43 +1,15 @@
 from __future__ import annotations
 
 import argparse
-from dataclasses import dataclass
+import subprocess
 from typing import Any
 
-import matplotlib.pyplot as plt
 import pandas as pd
-from stillib_plotting import figure, set_axis_labels, use_style
 
 from ....config import ProjectConfig
 from ....core.io import save_dataframe
 from ....manifest import fetch_from_manifest
 from ....paths import ProjectPaths
-
-COLORS = {
-    "uniform": "#1f77b4",
-    "mixed": "#ff7f0e",
-    "metaballs": "#2ca02c",
-}
-
-
-def _plot_index_state(df: pd.DataFrame) -> None:
-    use_style()
-
-    fig, ax = figure(size="single")
-    for type, group in df.groupby("type"):
-        ax.scatter(
-            group["plug_aspect"],
-            group["porosity"],
-            label=type,
-            color=COLORS.get(str(type)),
-            edgecolor="black",
-        )
-    set_axis_labels(ax, r"Plug Aspect Ratio $R$", r"Mean Porosity $\theta$")
-    ax.set_xlim(0.05, 0.45)
-    ax.set_ylim(0.0, 1.05)
-    ax.legend(title="Type", loc="center left", bbox_to_anchor=(1.0, 1.0))
-    plt.show()
-    return
 
 
 def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
@@ -77,16 +49,25 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
     save_dataframe(paths.index.path, df)
 
     if args.show:
-        _plot_index_state(df)
+        cmd = ["msc", "utils", "show-index"]
+        if args.selected_only:
+            cmd.append("--selected-only")
+        subprocess.run(cmd, check=True)
 
     return
 
 
 def add_parser(subparsers: argparse._SubParsersAction) -> None:
     parser = subparsers.add_parser(
-        "compile-candidates", help="Compile candidate configurations for search"
+        "compile-index", help="Compile candidate configurations for search"
     )
     parser.set_defaults(cmd=_cmd)
+    parser.add_argument(
+        "-o",
+        "--selected-only",
+        action="store_true",
+        help="Show only selected configurations in the index state",
+    )
     parser.add_argument(
         "-s", "--show", action="store_true", help="Show the index state"
     )
