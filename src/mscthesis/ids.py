@@ -26,3 +26,16 @@ def validate_sample_id(sample_id: str, required_digits: int) -> str:
         ) from exc
 
     return sample_id
+
+
+@log_call()
+def sample_id_from_int(sample_id_int: int, required_digits: int) -> str:
+    """
+    Convert an integer sample ID to a string with leading zeros based on the required number of digits.
+    Args:
+        sample_id_int (int): The integer sample ID to convert.
+        required_digits (int): The required length of the resulting sample ID string.
+    """
+    sample_id_str = str(sample_id_int).zfill(required_digits)
+
+    return validate_sample_id(sample_id_str, required_digits)

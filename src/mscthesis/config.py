@@ -186,6 +186,12 @@ class SelectedConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     porosity_gridsize: float = 0.10
+    retries: dict[str, Any] = {
+        "triangulation": {
+            "elements_per_cell_increment": 25,
+            "max_attempts": 4,
+        }
+    }
 
 
 class SearchConfig(BaseModel):

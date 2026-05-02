@@ -18,7 +18,12 @@ from .commands.sample import (
     synthesize_uniform,
     triangulate,
 )
-from .commands.search import compile_index, gen_candidates, update_selected
+from .commands.search import (
+    compile_index,
+    gen_candidates,
+    triangulate_selected,
+    update_selected,
+)
 from .commands.utils import max_sample_id as wim
 from .commands.utils import print_config, show_index, visualize
 
@@ -133,6 +138,7 @@ def _build_parser() -> argparse.ArgumentParser:
     gen_candidates.add_parser(search_subparsers)
     compile_index.add_parser(search_subparsers)
     update_selected.add_parser(search_subparsers)
+    triangulate_selected.add_parser(search_subparsers)
     return parser
 
 
