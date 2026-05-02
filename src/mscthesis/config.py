@@ -174,6 +174,30 @@ class PipesConfig(BaseModel):
     )
 
 
+class CandidateConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class SelectedConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class SearchConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    plug_aspect_grid: dict[int, float] = {
+        0: 0.10,
+        1: 0.15,
+        2: 0.20,
+        3: 0.25,
+        4: 0.30,
+        5: 0.35,
+        6: 0.40,
+    }
+    candidates: CandidateConfig = CandidateConfig()
+    selected: SelectedConfig = SelectedConfig()
+
+
 class ProjectConfig(BaseModel):
     meta: MetaConfig = MetaConfig()
     behavior: BehaviorConfig = BehaviorConfig()
@@ -185,6 +209,7 @@ class ProjectConfig(BaseModel):
     solve_diffusion: DiffusionSolveConfig = DiffusionSolveConfig()
     scanning: ScanningConfig = ScanningConfig()
     pipes: PipesConfig = PipesConfig()
+    search: SearchConfig = SearchConfig()
     max_workers: int = 8
 
     def dump_json(self) -> str:

@@ -177,7 +177,7 @@ class SamplePaths(PathsBase):
     def __init__(self, base: PathLike, sample_id: str) -> None:
         super().__init__(base)
         self.sample_id = sample_id
-        self.format = "03d"
+        self.format = "02d"
         return
 
     @path_field(kind="dir")

@@ -3,7 +3,7 @@
         "storage_root": "/home/andreasstillits/coding/MasterThesis/.treasury",
         "sample_id_digits": 5
     },
-    "solver": {
+    "solver_ctx": {
         "petsc_options": {
             "ksp_type": "cg",
             "ksp_rtol": 1e-08,
@@ -17,15 +17,28 @@
             "num_cells": 100,
             "radius": 0.08
         },
+        "mixed": {
+            "num_cells": 200,
+            "radius_min": 0.04,
+            "radius_max": 0.1
+        },
+        "metaballs": {
+            "num_cells": 200,
+            "radius_min": 0.04,
+            "radius_max": 0.06,
+            "threshold": 4.2
+        },
         "base_seed": 123456,
         "resolution": 100,
         "plug_aspect": 0.25,
-        "separation": 0.01,
-        "max_attempts": 10000
+        "separation": 0.005,
+        "max_attempts": 10000,
+        "num_cells_min": 25,
+        "num_cells_max": 200
     },
     "triangulation": {
-        "smoothing_iterations": 5,
-        "elements_per_cell": 100,
+        "smoothing_iterations": 10,
+        "elements_per_cell": 150,
         "shrinkage_tolerance": 0.1,
         "spacing": [
             1.0,
@@ -37,22 +50,97 @@
     },
     "meshing": {
         "mesh_field": {
-            "stomatal_aspect": 0.15,
-            "scale_factor": 2.0,
+            "stomatal_aspect": 0.2,
+            "scale_factor": 1.0,
             "global_max_num": 25,
             "edge_min_num": 50,
-            "edge_dist_min": 0.04,
-            "edge_dist_max": 0.08,
+            "edge_dist_min": 0.025,
+            "edge_dist_max": 0.05,
             "cell_min": 0.01,
-            "cell_dist_min": 0.01,
+            "cell_dist_min": 0.02,
             "cell_dist_max": 0.05,
-            "inlet_min": 0.005,
-            "inlet_dist_min": 0.04,
+            "inlet_min": 0.008,
+            "inlet_dist_min": 0.08,
             "inlet_dist_max": 0.5,
             "atol": 0.005
         },
-        "boundary_margin": 0.05,
+        "boundary_margin": 0.02,
         "substomatal_margin": 0.05,
         "atol": 0.005
-    }
+    },
+    "solve_active": {
+        "parameters": [
+            0.7,
+            1.0,
+            0.1
+        ]
+    },
+    "solve_diffusion": {
+        "parameters": [
+            0.7,
+            0.2
+        ]
+    },
+    "scanning": {
+        "transport_min": 0.01,
+        "transport_max": 100.0,
+        "transport_num": 10,
+        "absorption_min": 0.01,
+        "absorption_max": 100.0,
+        "absorption_num": 10,
+        "compensation": 0.1,
+        "preliminary_resistance": 1.0
+    },
+    "pipes": {
+        "make": {
+            "plug_aspect_min": 0.1,
+            "plug_aspect_max": 0.5,
+            "plug_aspect_delta": 0.025,
+            "stomatal_aspect_min": 0.025,
+            "stomatal_aspect_delta": 0.025
+        },
+        "validation": {
+            "scale_min": 1.0,
+            "scale_max": 4.0,
+            "scale_num": 32,
+            "plug_aspect": 0.5,
+            "stomatal_aspect": 0.1
+        },
+        "parameter_sets": [
+            [
+                0.8,
+                0.2
+            ],
+            [
+                0.8,
+                0.4
+            ],
+            [
+                0.8,
+                0.6
+            ],
+            [
+                0.6,
+                0.2
+            ],
+            [
+                0.6,
+                0.4
+            ]
+        ]
+    },
+    "search": {
+        "plug_aspect_grid": {
+            "0": 0.1,
+            "1": 0.15,
+            "2": 0.2,
+            "3": 0.25,
+            "4": 0.3,
+            "5": 0.35,
+            "6": 0.4
+        },
+        "candidates": {},
+        "selected": {}
+    },
+    "max_workers": 8
 }
