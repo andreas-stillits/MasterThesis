@@ -29,7 +29,7 @@ def validate_sample_id(sample_id: str, required_digits: int) -> str:
 
 
 @log_call()
-def sample_id_from_int(sample_id_int: int, required_digits: int) -> str:
+def asstr(sample_id_int: int, required_digits: int) -> str:
     """
     Convert an integer sample ID to a string with leading zeros based on the required number of digits.
     Args:

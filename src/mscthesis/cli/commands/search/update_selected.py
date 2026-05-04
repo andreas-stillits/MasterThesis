@@ -31,9 +31,6 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
             if df_.empty:
                 continue
             sample_ids = df_["sample_id"].tolist()
-            sample_ids = [
-                f"{id:0{config.behavior.sample_id_digits}d}" for id in sample_ids
-            ]
             # if some already in selected, skip
             if any((paths.selected / sample_id).exists() for sample_id in sample_ids):
                 continue
@@ -49,7 +46,7 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
 
     # show index state if requested
     if args.show:
-        cmd = ["msc", "utils", "show-index", "--selected-only"]
+        cmd = ["msc", "search", "show-index", "--selected-only"]
         subprocess.run(cmd, check=True)
 
     return

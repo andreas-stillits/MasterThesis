@@ -181,5 +181,7 @@ def load_dataframe(file_path: str | Path) -> pd.DataFrame:
     Returns:
         pd.DataFrame: The loaded DataFrame.
     """
-    dataframe = pd.read_csv(file_path, decimal=",", sep="\t")
+    dataframe = pd.read_csv(
+        file_path, decimal=",", sep="\t", dtype={"sample_id": "string"}
+    )
     return dataframe

@@ -49,7 +49,7 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
     save_dataframe(paths.index.path, df)
 
     if args.show:
-        cmd = ["msc", "utils", "show-index"]
+        cmd = ["msc", "search", "show-index"]
         if args.selected_only:
             cmd.append("--selected-only")
         subprocess.run(cmd, check=True)

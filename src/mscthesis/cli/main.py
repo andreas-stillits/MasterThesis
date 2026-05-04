@@ -21,11 +21,12 @@ from .commands.sample import (
 from .commands.search import (
     compile_index,
     gen_candidates,
+    show_index,
     triangulate_selected,
     update_selected,
 )
 from .commands.utils import max_sample_id as wim
-from .commands.utils import print_config, show_index, visualize
+from .commands.utils import print_config, visualize
 
 try:
     import argcomplete
@@ -120,7 +121,6 @@ def _build_parser() -> argparse.ArgumentParser:
     print_config.add_parser(utils_subparsers)
     visualize.add_parser(utils_subparsers)
     wim.add_parser(utils_subparsers)
-    show_index.add_parser(utils_subparsers)
     #
     # ================================================================================
     # batch commands
@@ -137,6 +137,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     gen_candidates.add_parser(search_subparsers)
     compile_index.add_parser(search_subparsers)
+    show_index.add_parser(search_subparsers)
     update_selected.add_parser(search_subparsers)
     triangulate_selected.add_parser(search_subparsers)
     return parser

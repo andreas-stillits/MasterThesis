@@ -11,6 +11,7 @@ from stillib_random.multiprocessing import TaskStream, assign_streams
 from ....config import ProjectConfig, save_config
 from ....core.io import save_voxels
 from ....core.synthesis.mixed import generate_voxels_from_rng
+from ....ids import asstr
 from ....manifest import dump_manifest
 from ....paths import ProjectPaths
 
@@ -34,7 +35,7 @@ def generate_candidates(config: ProjectConfig, start_id: int) -> list[Candidate]
                 radius_width = config.search.candidates.radius_width
                 radius_min = max(0.01, radius_center - radius_width)
                 radius_max = radius_center + radius_width
-                sample_id_str = f"{sample_id:0{config.behavior.sample_id_digits}d}"
+                sample_id_str = asstr(sample_id, config.behavior.sample_id_digits)
                 candidate = Candidate(
                     sample_id_str,
                     plug_aspect,
