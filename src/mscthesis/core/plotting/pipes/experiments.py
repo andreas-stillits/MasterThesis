@@ -61,7 +61,7 @@ def plot_experiments(
         marker="o",
         s=100,
         vmin=1.0,
-        vmax=2.0,
+        vmax=4.0,
     )
     ax3.set_xlabel("plug aspect")
     ax3.set_ylabel("stomatal aspect")

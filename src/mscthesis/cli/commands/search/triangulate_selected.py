@@ -70,12 +70,10 @@ def execute_triangulation(sample_id: str) -> None:
     #
     if not brep_path.exists() or force:
         voxels = load_voxels(sample_paths.synthesis.voxels.require())
-        num_cells_placed = cast(
-            int,
-            fetch_from_manifest(
-                sample_paths.synthesis.manifest.require(), "num_cells_placed"
-            ),
+        num_cells_placed = fetch_from_manifest(
+            sample_paths.synthesis.manifest.require(), "num_cells_placed"
         )
+        assert isinstance(num_cells_placed, int)
 
         # retry loop with different parameters
         for idx, elements_per_cell in enumerate(elements_per_cell_set):
