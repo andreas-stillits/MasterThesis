@@ -21,6 +21,7 @@ from .commands.sample import (
 from .commands.search import (
     compile_index,
     gen_candidates,
+    mesh_selected,
     show_index,
     triangulate_selected,
     update_selected,
@@ -123,7 +124,7 @@ def _build_parser() -> argparse.ArgumentParser:
     wim.add_parser(utils_subparsers)
     #
     # ================================================================================
-    # batch commands
+    # search commands
     # ================================================================================
     #
     search_parser = subparsers.add_parser(
@@ -140,6 +141,7 @@ def _build_parser() -> argparse.ArgumentParser:
     show_index.add_parser(search_subparsers)
     update_selected.add_parser(search_subparsers)
     triangulate_selected.add_parser(search_subparsers)
+    mesh_selected.add_parser(search_subparsers)
     return parser
 
 

@@ -3,35 +3,15 @@ from __future__ import annotations
 import argparse
 import os
 import subprocess
-from dataclasses import dataclass
-from typing import Any, cast
+from typing import Any
 
 from stillib_parallelism import collect, print_progress
 
 from ....config import ProjectConfig, save_config
 from ....core.io import load_dataframe, load_voxels, save_surface_mesh
 from ....core.meshing.triangulation import triangulate_voxels
-from ....ids import validate_sample_id
 from ....manifest import dump_manifest, fetch_from_manifest
 from ....paths import ProjectPaths
-
-""" 
-RETRY LOGIC:
-
-params = [
-    {"a": 1, "b": 2},
-    {"a": 3, "b": 4},
-]
-
-for param in params:
-    try: 
-        result = some_function(**param)
-        break # stop looping further if successful
-    except SomeError:
-        continue # try the next set of parameters
-else: # only executed if the loop completes without a break
-    raise RuntimeError("All attempts failed.")
-"""
 
 _STATE: dict[str, Any] = {}
 

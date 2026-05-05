@@ -91,7 +91,7 @@ class MeshFieldConfig(BaseModel):
     inlet_min: float = 0.008
     inlet_dist_min: float = 0.08
     inlet_dist_max: float = 0.50
-    atol: float = 0.005
+    atol: float = 0.01
 
 
 class MeshingConfig(BaseModel):
@@ -192,6 +192,8 @@ class SelectedConfig(BaseModel):
             "max_attempts": 4,
         }
     }
+    porous_inlet_offset: float = 1e-2
+    porous_inlet_specifier: int = 0
 
 
 class SearchConfig(BaseModel):
@@ -205,6 +207,13 @@ class SearchConfig(BaseModel):
         4: 0.30,
         5: 0.35,
         6: 0.40,
+    }
+    stomatal_aspect_set: dict[int, float] = {
+        # reserve 0 for the variant were stomatal area ~ plug area
+        1: 0.020,
+        2: 0.030,
+        3: 0.040,
+        4: 0.050,
     }
     candidates: CandidateConfig = CandidateConfig()
     selected: SelectedConfig = SelectedConfig()

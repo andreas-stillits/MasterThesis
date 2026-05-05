@@ -1,14 +1,10 @@
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, cast
 
 import gmsh
 import numpy as np
-
-from mscthesis.config import ProjectConfig
 
 from ...log import log_call
 
@@ -125,9 +121,9 @@ def _assert(count3d: int, count2d: int, count1d: int) -> None:
     num_surfaces = len(kernel.getEntities(dim=2))
     num_curves = len(kernel.getEntities(dim=1))
     assert num_volumes == count3d, f"Expected {count3d} volumes but found {num_volumes}"
-    assert num_surfaces == count2d, (
-        f"Expected {count2d} surfaces but found {num_surfaces}"
-    )
+    assert (
+        num_surfaces == count2d
+    ), f"Expected {count2d} surfaces but found {num_surfaces}"
     assert num_curves == count1d, f"Expected {count1d} curves but found {num_curves}"
     return
 
@@ -280,9 +276,9 @@ def mesh_model(
     atol: float,
 ) -> None:
     # BASELINE
-    assert stomatal_aspect < plug_aspect, (
-        "Stomatal aspect ratio must be smaller than plug aspect ratio"
-    )
+    assert (
+        stomatal_aspect < plug_aspect
+    ), "Stomatal aspect ratio must be smaller than plug aspect ratio"
     volumes = kernel.getEntities(dim=3)
     assert len(volumes) == 1, "Expected exactly one volume in the model"
 
@@ -362,12 +358,12 @@ def mesh_model(
     outer_curves = {tag for dim, tag in outer_boundary if dim == 1}
 
     interface_curves = list(inner_curves.intersection(outer_curves))
-    assert len(interface_curves) == 1, (
-        "Expected exactly one curve at the inlet interface"
-    )
-    assert _isclose(kernel.getMass(1, interface_curves[0]), target_circumference), (
-        "Expected inner boundary to be target circle"
-    )
+    assert (
+        len(interface_curves) == 1
+    ), "Expected exactly one curve at the inlet interface"
+    assert _isclose(
+        kernel.getMass(1, interface_curves[0]), target_circumference
+    ), "Expected inner boundary to be target circle"
     tags[Tags.INLET_BOUNDARY] = interface_curves[0]
 
     # ASSIGN PHYSICAL GROUPS
