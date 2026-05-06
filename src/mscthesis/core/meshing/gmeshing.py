@@ -121,9 +121,9 @@ def _assert(count3d: int, count2d: int, count1d: int) -> None:
     num_surfaces = len(kernel.getEntities(dim=2))
     num_curves = len(kernel.getEntities(dim=1))
     assert num_volumes == count3d, f"Expected {count3d} volumes but found {num_volumes}"
-    assert (
-        num_surfaces == count2d
-    ), f"Expected {count2d} surfaces but found {num_surfaces}"
+    assert num_surfaces == count2d, (
+        f"Expected {count2d} surfaces but found {num_surfaces}"
+    )
     assert num_curves == count1d, f"Expected {count1d} curves but found {num_curves}"
     return
 
@@ -276,9 +276,9 @@ def mesh_model(
     atol: float,
 ) -> None:
     # BASELINE
-    assert (
-        stomatal_aspect < plug_aspect
-    ), "Stomatal aspect ratio must be smaller than plug aspect ratio"
+    assert stomatal_aspect < plug_aspect, (
+        "Stomatal aspect ratio must be smaller than plug aspect ratio"
+    )
     volumes = kernel.getEntities(dim=3)
     assert len(volumes) == 1, "Expected exactly one volume in the model"
 
@@ -358,23 +358,29 @@ def mesh_model(
     outer_curves = {tag for dim, tag in outer_boundary if dim == 1}
 
     interface_curves = list(inner_curves.intersection(outer_curves))
-    assert (
-        len(interface_curves) == 1
-    ), "Expected exactly one curve at the inlet interface"
-    assert _isclose(
-        kernel.getMass(1, interface_curves[0]), target_circumference
-    ), "Expected inner boundary to be target circle"
+    assert len(interface_curves) == 1, (
+        "Expected exactly one curve at the inlet interface"
+    )
+    assert _isclose(kernel.getMass(1, interface_curves[0]), target_circumference), (
+        "Expected inner boundary to be target circle"
+    )
     tags[Tags.INLET_BOUNDARY] = interface_curves[0]
 
     # ASSIGN PHYSICAL GROUPS
-    gmsh.model.addPhysicalGroup(3, [tags[Tags.AIRSPACE]], name="Airspace")
-    gmsh.model.addPhysicalGroup(2, [tags[Tags.TOP]], name="Top")
-    gmsh.model.addPhysicalGroup(2, [tags[Tags.BOTTOM]], name="Bottom")
-    gmsh.model.addPhysicalGroup(2, [tags[Tags.CURVED]], name="Curved")
-    gmsh.model.addPhysicalGroup(2, [tags[Tags.INLET]], name="Inlet")
-    gmsh.model.addPhysicalGroup(1, [tags[Tags.INLET_BOUNDARY]], name="InletBoundary")
+    gmsh.model.addPhysicalGroup(
+        3, [tags[Tags.AIRSPACE]], tag=Tags.AIRSPACE, name="Airspace"
+    )
+    gmsh.model.addPhysicalGroup(2, [tags[Tags.TOP]], tag=Tags.TOP, name="Top")
+    gmsh.model.addPhysicalGroup(2, [tags[Tags.BOTTOM]], tag=Tags.BOTTOM, name="Bottom")
+    gmsh.model.addPhysicalGroup(2, [tags[Tags.CURVED]], tag=Tags.CURVED, name="Curved")
+    gmsh.model.addPhysicalGroup(2, [tags[Tags.INLET]], tag=Tags.INLET, name="Inlet")
+    gmsh.model.addPhysicalGroup(
+        1, [tags[Tags.INLET_BOUNDARY]], tag=Tags.INLET_BOUNDARY, name="InletBoundary"
+    )
     if Tags.MESOPHYLL in tags:
-        gmsh.model.addPhysicalGroup(2, tags[Tags.MESOPHYLL], name="MesophyllCells")
+        gmsh.model.addPhysicalGroup(
+            2, tags[Tags.MESOPHYLL], tag=Tags.MESOPHYLL, name="MesophyllCells"
+        )
 
     # MESHING
     global_max_ = 2 * np.pi * plug_aspect / global_max_num * scale_factor
@@ -408,6 +414,135 @@ def mesh_model(
         [tags[Tags.INLET_BOUNDARY]],
     )
     field.setNumber(inlet_boundary_distance, "Sampling", 100)
+    inlet_boundary_threshold = field.add("Threshold")
+    field.setNumber(inlet_boundary_threshold, "InField", inlet_boundary_distance)
+    field.setNumber(inlet_boundary_threshold, "LcMin", inlet_min_)
+    field.setNumber(inlet_boundary_threshold, "LcMax", global_max_)
+    field.setNumber(inlet_boundary_threshold, "DistMin", inlet_dist_min)
+    field.setNumber(inlet_boundary_threshold, "DistMax", inlet_dist_max)
+    field_list.append(inlet_boundary_threshold)
+
+    # control distance to mesophyll cell surfaces
+    if Tags.MESOPHYLL in tags:
+        mesophyll_distance = field.add("Distance")
+        field.setNumbers(mesophyll_distance, "FacesList", tags[Tags.MESOPHYLL])
+        mesophyll_threshold = field.add("Threshold")
+        field.setNumber(mesophyll_threshold, "InField", mesophyll_distance)
+        field.setNumber(mesophyll_threshold, "LcMin", cell_min_)
+        field.setNumber(mesophyll_threshold, "LcMax", global_max_)
+        field.setNumber(mesophyll_threshold, "DistMin", cell_dist_min)
+        field.setNumber(mesophyll_threshold, "DistMax", cell_dist_max)
+        field_list.append(mesophyll_threshold)
+
+    # combine fields by taking the minimum at each point
+    minimum_field = field.add("Min")
+    field.setNumbers(
+        minimum_field,
+        "FieldsList",
+        field_list,
+    )
+    field.setAsBackgroundMesh(minimum_field)
+    kernel.synchronize()
+
+    # FINALIZE
+    gmsh.model.mesh.generate(3)
+
+    gmsh.write(str(output_path))
+
+    gmsh.finalize()
+
+
+@log_call()
+def mesh_porous_model(
+    output_path: str | Path,
+    airspace_tag: int,
+    plug_aspect: float,
+    scale_factor: float,
+    global_max_num: int,
+    edge_min_num: int,
+    edge_dist_min: float,
+    edge_dist_max: float,
+    cell_min: float,
+    cell_dist_min: float,
+    cell_dist_max: float,
+    inlet_min: float,
+    inlet_dist_min: float,
+    inlet_dist_max: float,
+    atol: float,
+) -> None:
+    # BASELINE
+    volumes = kernel.getEntities(dim=3)
+    assert len(volumes) == 1, "Expected exactly one volume in the model"
+
+    # IDENTIFY SURFACES BY THEIR AREA (MASS)
+    tags: dict[int, list[int] | int] = {}
+    tags[Tags.AIRSPACE] = airspace_tag
+    plug_target = np.pi * plug_aspect**2
+    inlet_target = plug_target
+    curved_target = 2 * np.pi * plug_aspect * 1.0
+
+    mesophyll_tags: list[int] = []
+
+    def _isclose(x: float, y: float, atol: float = atol) -> bool:
+        return abs(x - y) < atol * y
+
+    for dim, tag in kernel.getEntities(dim=2):
+        com = kernel.getCenterOfMass(dim, tag)
+        mass = kernel.getMass(dim, tag)
+        if np.isclose(com[2], 1.0) and _isclose(mass, plug_target):
+            tags[Tags.TOP] = tag
+        elif np.isclose(com[2], 0.0) and _isclose(mass, inlet_target):
+            tags[Tags.INLET] = tag
+        elif _isclose(mass, curved_target):
+            tags[Tags.CURVED] = tag
+        else:
+            mesophyll_tags.append(tag)
+    if len(mesophyll_tags) > 0:
+        tags[Tags.MESOPHYLL] = mesophyll_tags
+
+    # ASSIGN PHYSICAL GROUPS
+    gmsh.model.addPhysicalGroup(
+        3, [tags[Tags.AIRSPACE]], tag=Tags.AIRSPACE, name="Airspace"
+    )
+    gmsh.model.addPhysicalGroup(2, [tags[Tags.TOP]], tag=Tags.TOP, name="Top")
+    gmsh.model.addPhysicalGroup(2, [tags[Tags.CURVED]], tag=Tags.CURVED, name="Curved")
+    gmsh.model.addPhysicalGroup(2, [tags[Tags.INLET]], tag=Tags.INLET, name="Inlet")
+    if Tags.MESOPHYLL in tags:
+        gmsh.model.addPhysicalGroup(
+            2, tags[Tags.MESOPHYLL], tag=Tags.MESOPHYLL, name="MesophyllCells"
+        )
+
+    # MESHING
+    global_max_ = 2 * np.pi * plug_aspect / global_max_num * scale_factor
+    edge_min_ = 2 * np.pi * plug_aspect / edge_min_num * scale_factor
+    cell_min_ = cell_min * scale_factor
+    inlet_min_ = inlet_min * scale_factor
+
+    field_list = []
+    gmsh.option.setNumber("Mesh.MeshSizeExtendFromBoundary", 0)
+
+    # add distance field away from the edge:
+    edge_distance = field.add("Distance")
+    field.setNumbers(
+        edge_distance,
+        "FacesList",
+        [tags[Tags.CURVED], tags[Tags.TOP], tags[Tags.INLET]],
+    )
+    edge_threshold = field.add("Threshold")
+    field.setNumber(edge_threshold, "InField", edge_distance)
+    field.setNumber(edge_threshold, "LcMin", edge_min_)
+    field.setNumber(edge_threshold, "LcMax", global_max_)
+    field.setNumber(edge_threshold, "DistMin", edge_dist_min)
+    field.setNumber(edge_threshold, "DistMax", edge_dist_max)
+    field_list.append(edge_threshold)
+
+    # add distance field away from the inlet:
+    inlet_boundary_distance = field.add("Distance")
+    field.setNumbers(
+        inlet_boundary_distance,
+        "FacesList",
+        [tags[Tags.INLET]],
+    )
     inlet_boundary_threshold = field.add("Threshold")
     field.setNumber(inlet_boundary_threshold, "InField", inlet_boundary_distance)
     field.setNumber(inlet_boundary_threshold, "LcMin", inlet_min_)

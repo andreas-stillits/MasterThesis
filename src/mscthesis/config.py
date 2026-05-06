@@ -210,6 +210,7 @@ class SearchConfig(BaseModel):
     }
     stomatal_aspect_set: dict[int, float] = {
         # reserve 0 for the variant were stomatal area ~ plug area
+        0: 0.000,
         1: 0.020,
         2: 0.030,
         3: 0.040,
@@ -231,7 +232,7 @@ class ProjectConfig(BaseModel):
     scanning: ScanningConfig = ScanningConfig()
     pipes: PipesConfig = PipesConfig()
     search: SearchConfig = SearchConfig()
-    max_workers: int = 8
+    max_workers: int = 16
 
     def dump_json(self) -> str:
         return json.dumps(self.model_dump(), indent=4, default=str)
