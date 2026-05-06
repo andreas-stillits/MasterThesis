@@ -158,7 +158,7 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
         print(
             "saving list of failures to file: '<storage_root>/triangulation_failures.txt'"
         )
-        failures_path = paths.base / "triangulation_failures.txt"
+        failures_path = paths.failures.ensure() / "triangulation_failures.txt"
         with open(failures_path, "w") as f:
             for failure in report.failures:
                 f.write(

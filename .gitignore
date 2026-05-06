@@ -1,5 +1,6 @@
 tmp/
 .vscode/
 .treasury/
+.backup/
 **/*.egg-info/
 **/__pycache__/ 

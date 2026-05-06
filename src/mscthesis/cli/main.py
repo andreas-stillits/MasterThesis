@@ -20,6 +20,7 @@ from .commands.sample import (
 )
 from .commands.search import (
     compile_index,
+    compile_solutions,
     gen_candidates,
     mesh_selected,
     show_index,
@@ -144,6 +145,7 @@ def _build_parser() -> argparse.ArgumentParser:
     triangulate_selected.add_parser(search_subparsers)
     mesh_selected.add_parser(search_subparsers)
     solve_selected.add_parser(search_subparsers)
+    compile_solutions.add_parser(search_subparsers)
     return parser
 
 
