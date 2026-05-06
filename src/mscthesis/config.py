@@ -187,8 +187,9 @@ class SelectedValidationConfig(BaseModel):
 
     scale_min: float = 1.0
     scale_max: float = 4.0
-    scale_num: int = 36
+    scale_num: int = 16
     stomatal_aspect: float = 0.02
+    parameter_set: tuple[float, float, float] = (0.9, 10.0, 0.1)
 
 
 class SelectedConfig(BaseModel):

@@ -6,11 +6,13 @@ from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
+import pandas as pd
+from stillib_parallelism import collect, print_progress
 
 from ....config import ProjectConfig, save_config
 from ....core.io import load_dataframe, load_volumetric_mesh, save_dataframe
-from ....core.meshing.gmeshing import build_pipe_model, mesh_model
-from ....core.plotting.pipes.validation import plot_validation
+from ....core.meshing.gmeshing import build_sample_model, mesh_model
+from ....core.plotting.search.validation import plot_validation
 from ....core.solvers import MeshContext, PhotoactiveSolver, SolverContext
 from ....ids import validate_sample_id
 from ....paths import ProjectPaths, ValidationPaths
@@ -47,11 +49,66 @@ def initialize_worker(force: bool, sample_id: str) -> None:
         "config": config,
         "paths": paths,
         "force": force,
-        "sample_id": sample_id,
     }
 
 
 def execute_task(task: Task) -> list[dict[str, Any]] | None:
+    global _STATE
+    config: ProjectConfig = _STATE["config"]
+    paths: ValidationPaths = _STATE["paths"]
+    force: bool = _STATE["force"]
+
+    # get path for this task
+    mesh = paths.mesh(task.scale_factor).file
+
+    # check if mesh already exists
+    if not mesh.exists() or force:
+        # build and mesh the model
+        mesh_field_settings = config.meshing.mesh_field.model_dump()
+        mesh_field_settings["stomatal_aspect"] = task.stomatal_aspect
+        mesh_field_settings["scale_factor"] = task.scale_factor
+        # perform meshing
+        mesh_model(
+            mesh.path,
+            *build_sample_model(
+                paths.triangulation.cadmodel.require(),
+                config.meshing.boundary_margin,
+                config.meshing.substomatal_margin,
+                config.meshing.atol,
+            ),
+            **mesh_field_settings,
+        )
+    # solve photoactive if not already done or if force is True
+    if not paths.results.exists() or force:
+        qois: list[dict[str, Any]] = []
+
+        mesh_ctx: MeshContext = load_volumetric_mesh(mesh.require())
+
+        for order in [1, 2]:
+            solver_ctx = config.solver_ctx.model_dump()
+            solver_ctx["order"] = order
+            solver = PhotoactiveSolver(
+                SolverContext(**solver_ctx),
+                mesh_ctx,
+            )
+            parameters = config.search.selected.validation.parameter_set
+            solution, analysis = solver.solve_for(
+                *parameters,
+            )
+            chii = analysis["substomatal_mean"]
+            chim = analysis["top_mean"]
+            flux = analysis["mesophyll_flux_sol"] / analysis["plug_area"]
+            resistance = np.abs((chii - chim) / flux)
+            qois.append(
+                {
+                    "scale_factor": task.scale_factor,
+                    "order": order,
+                    "resistance": resistance,
+                    **analysis,
+                }
+            )
+
+        return qois
 
     return
 
@@ -87,8 +144,49 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
         dirs_exist_ok=True,
     )
 
-    # now run validation test as for pipes on the copied .brep file
+    # delete existing files if force is True
+    if args.force:
+        for path in validation_paths.meshes.path.glob("*.msh"):
+            # delete mesh files
+            path.unlink()
+    validation_config = config.search.selected.validation.model_dump()
+    del validation_config["parameter_set"]
 
+    tasks = make_tasks(**validation_config)
+
+    report = collect(
+        tasks,
+        execute_task,
+        max_workers=config.max_workers,
+        initializer=initialize_worker,
+        initargs=(args.force, sample_id),
+        progress_callback=print_progress,
+        error_policy="raise",
+    )
+
+    aggregate = []
+
+    for item in report.completed:
+        if item.result is not None:
+            aggregate.extend(item.result)
+
+    if aggregate:
+        dataframe = pd.DataFrame(aggregate)
+        dataframe.sort_values(["scale_factor", "order"]).reset_index(
+            drop=True, inplace=True
+        )
+        save_dataframe(validation_paths.results.path, dataframe)
+
+    save_config(
+        validation_paths.config.path,
+        config,
+        "search",
+        "meshing",
+        "solver_ctx",
+    )
+
+    dataframe = load_dataframe(validation_paths.results.require())
+    plot_validation(dataframe, validation_paths.plot.path, show=args.show)
     return
 
 

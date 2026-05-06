@@ -28,7 +28,6 @@ from .commands.search import (
     triangulate_selected,
     update_selected,
 )
-from .commands.utils import max_sample_id as wim
 from .commands.utils import print_config, validate, visualize
 
 try:
@@ -124,7 +123,6 @@ def _build_parser() -> argparse.ArgumentParser:
     print_config.add_parser(utils_subparsers)
     validate.add_parser(utils_subparsers)
     visualize.add_parser(utils_subparsers)
-    wim.add_parser(utils_subparsers)
     #
     # ================================================================================
     # search commands
