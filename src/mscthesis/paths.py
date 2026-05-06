@@ -47,6 +47,14 @@ class ValidationPaths(PathsBase):
     def config(self) -> Path:
         return self.root / "config.json"
 
+    @child_paths
+    def synthesis(self) -> SynthesisPaths:
+        return SynthesisPaths(self.root.ensure(), "synthesis")
+
+    @child_paths
+    def triangulation(self) -> TriangulationPaths:
+        return TriangulationPaths(self.root.ensure(), "triangulation")
+
     def mesh(self, scale_factor: float) -> MeshFilePaths:
         return MeshFilePaths(self.meshes.ensure(), scale_factor, format=".2f")
 
@@ -256,6 +264,10 @@ class ProjectPaths(PathsBase):
         return self.base / "selected"
 
     @path_field(kind="dir")
+    def validations(self) -> Path:
+        return self.base / "validations"
+
+    @path_field(kind="dir")
     def failures(self) -> Path:
         return self.base / "failures"
 
@@ -275,3 +287,6 @@ class ProjectPaths(PathsBase):
 
     def selected_sample(self, sample_id: str) -> SamplePaths:
         return SamplePaths(self.selected.ensure(), sample_id)
+
+    def validation(self, name: str) -> ValidationPaths:
+        return ValidationPaths(self.validations.ensure(), name)

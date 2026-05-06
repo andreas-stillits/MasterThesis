@@ -29,7 +29,7 @@ from .commands.search import (
     update_selected,
 )
 from .commands.utils import max_sample_id as wim
-from .commands.utils import print_config, visualize
+from .commands.utils import print_config, validate, visualize
 
 try:
     import argcomplete
@@ -122,6 +122,7 @@ def _build_parser() -> argparse.ArgumentParser:
         # the envoked command is stored under args.utils_command
     )
     print_config.add_parser(utils_subparsers)
+    validate.add_parser(utils_subparsers)
     visualize.add_parser(utils_subparsers)
     wim.add_parser(utils_subparsers)
     #

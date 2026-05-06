@@ -79,8 +79,8 @@ class TriangulationConfig(BaseModel):
 class MeshFieldConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    stomatal_aspect: float = 0.20
-    scale_factor: float = 1.0
+    stomatal_aspect: float = 0.02
+    scale_factor: float = 1.5
     global_max_num: int = 25
     edge_min_num: int = 50
     edge_dist_min: float = 0.025
@@ -88,10 +88,10 @@ class MeshFieldConfig(BaseModel):
     cell_min: float = 0.01
     cell_dist_min: float = 0.02
     cell_dist_max: float = 0.05
-    inlet_min: float = 0.008
-    inlet_dist_min: float = 0.08
-    inlet_dist_max: float = 0.50
-    atol: float = 0.01
+    inlet_min: float = 0.005
+    inlet_dist_min: float = 0.05
+    inlet_dist_max: float = 0.25
+    atol: float = 0.005
 
 
 class MeshingConfig(BaseModel):
@@ -156,8 +156,8 @@ class PipesValidationConfig(BaseModel):
     scale_min: float = 1.0
     scale_max: float = 4.0
     scale_num: int = 32
-    plug_aspect: float = 0.50
-    stomatal_aspect: float = 0.10
+    plug_aspect: float = 0.10
+    stomatal_aspect: float = 0.05
 
 
 class PipesConfig(BaseModel):
@@ -182,9 +182,19 @@ class CandidateConfig(BaseModel):
     radius_width: float = 0.02
 
 
+class SelectedValidationConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    scale_min: float = 1.0
+    scale_max: float = 4.0
+    scale_num: int = 36
+    stomatal_aspect: float = 0.02
+
+
 class SelectedConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    validation: SelectedValidationConfig = SelectedValidationConfig()
     porosity_gridsize: float = 0.10
     retries: dict[str, Any] = {
         "triangulation": {

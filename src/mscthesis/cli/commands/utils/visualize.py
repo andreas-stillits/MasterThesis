@@ -63,9 +63,9 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
             raise ValueError(f"Unsupported object name: {name}")
     else:
         try:
-            path = Path(args.specifier)
+            path = Path(args.key)
         except Exception as e:
-            print(f"Failed to convert specifier: {args.specifier} to a valid file path")
+            print(f"Failed to convert key: {args.key} to a valid file path")
             raise e
         #
         if not path.exists():
