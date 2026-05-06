@@ -96,8 +96,7 @@ def execute_meshing(sample_id: str) -> None:
 def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
     paths = ProjectPaths(config.behavior.storage_root)
     index = load_dataframe(paths.index.require())
-    # selected_ids = index[index["selected"]]["sample_id"].tolist()
-    selected_ids = ["00000"]
+    selected_ids = index[index["selected"]]["sample_id"].tolist()
 
     report = collect(
         selected_ids,

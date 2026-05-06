@@ -66,7 +66,7 @@ class SynthesisConfig(BaseModel):
 class TriangulationConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    smoothing_iterations: int = 10
+    smoothing_iterations: int = 5
     elements_per_cell: int = 150
     shrinkage_tolerance: float = 0.10
     spacing: tuple[float, float, float] = (1.0, 1.0, 1.0)
@@ -118,13 +118,13 @@ class SolverConfig(BaseModel):
 class PhotoactiveSolveConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    parameters: tuple[float, ...] = (0.7, 1.0, 0.1)
+    parameters: tuple[float, ...] = (0.8, 0.01, 0.1)
 
 
 class DiffusionSolveConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    parameters: tuple[float, ...] = (0.7, 0.2)
+    parameters: tuple[float, ...] = (0.8, 0.4)
 
 
 class ScanningConfig(BaseModel):
@@ -232,7 +232,7 @@ class ProjectConfig(BaseModel):
     scanning: ScanningConfig = ScanningConfig()
     pipes: PipesConfig = PipesConfig()
     search: SearchConfig = SearchConfig()
-    max_workers: int = 16
+    max_workers: int = 4
 
     def dump_json(self) -> str:
         return json.dumps(self.model_dump(), indent=4, default=str)
