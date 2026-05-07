@@ -118,7 +118,7 @@ class SolverConfig(BaseModel):
 class PhotoactiveSolveConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    parameters: tuple[float, ...] = (0.8, 0.01, 0.1)
+    parameters: tuple[float, ...] = (0.8, 0.1, 0.1)
 
 
 class DiffusionSolveConfig(BaseModel):
@@ -196,14 +196,13 @@ class SelectedConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     validation: SelectedValidationConfig = SelectedValidationConfig()
-    porosity_gridsize: float = 0.10
     retries: dict[str, Any] = {
         "triangulation": {
             "elements_per_cell_increment": 25,
             "max_attempts": 4,
         }
     }
-    porous_inlet_offset: float = 1e-2
+    porosity_gridsize: float = 0.10
     porous_inlet_specifier: int = 0
 
 
@@ -243,7 +242,7 @@ class ProjectConfig(BaseModel):
     scanning: ScanningConfig = ScanningConfig()
     pipes: PipesConfig = PipesConfig()
     search: SearchConfig = SearchConfig()
-    max_workers: int = 4
+    max_workers: int = 8
 
     def dump_json(self) -> str:
         return json.dumps(self.model_dump(), indent=4, default=str)
