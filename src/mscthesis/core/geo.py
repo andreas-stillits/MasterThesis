@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 import numpy as np
 import scipy
 
@@ -199,32 +201,27 @@ def sample_surfaces(
 
 
 @log_call()
-def geometry(
-    voxels: np.ndarray, n_samples: int | None = None
-) -> dict[str, float | np.floating]:
+def geometry(voxels: np.ndarray, n_samples: int | None = None) -> dict[str, Any]:
+    results: dict[str, Any] = {}
+
     geo, euc, valid_points = compute_geodesics(voxels)
     tor, lat = compute_for_targets(
         sample_surfaces(voxels, n_samples=n_samples), geo, euc, valid_points
     )
-    por = 1 - np.sum(voxels) / (voxels.size * np.pi / 4)
-    return {
+    summary = {
         "tortuosity": np.mean(tor),
         "tortuosity_factor": np.mean(tor**2),
         "lateral_lengthening": np.mean(lat),
-        "porosity": por,
-        "geometry_factor": (np.mean(lat) * np.mean(tor**2)) / por,
     }
-
-
-import json
-
-from mscthesis.config import ProjectConfig
-from mscthesis.core.io import load_voxels
-from mscthesis.paths import ProjectPaths
-
-config = ProjectConfig()
-paths = ProjectPaths(config.behavior.storage_root)
-voxel_path = paths.selected_sample("00101").synthesis.voxels.require()
-voxels = load_voxels(voxel_path)
-
-print(json.dumps(geometry(voxels, n_samples=500), indent=2))
+    results["surfaces"] = summary
+    #
+    tor, lat = compute_for_targets(
+        sample_zplane(1.0, valid_points, n_samples=n_samples), geo, euc, valid_points
+    )
+    summary = {
+        "tortuosity": np.mean(tor),
+        "tortuosity_factor": np.mean(tor**2),
+        "lateral_lengthening": np.mean(lat),
+    }
+    results["top"] = summary
+    return results

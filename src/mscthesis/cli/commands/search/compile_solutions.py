@@ -27,6 +27,11 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
         synthesis_type, target_plug_aspect = fetch_from_manifest(
             sample_paths.synthesis.manifest.require(), "type", "plug_aspect"
         )
+        # get geometry information
+        geo: dict[str, Any] = json.loads(
+            sample_paths.synthesis.geometry.require().read_text(encoding="utf-8")
+        )
+
         for specifier in config.search.stomatal_aspect_set:
             solutions_paths = sample_paths.solutions(specifier)
 
@@ -37,6 +42,10 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
                     "target_plug_aspect": target_plug_aspect,
                     "specifier": specifier,
                     "solver": "diffusion",
+                    "surface_tortuosity_factor": geo["surfaces"]["tortuosity_factor"],
+                    "surface_lateral": geo["surfaces"]["lateral_lengthening"],
+                    "top_tortuosity_factor": geo["top"]["tortuosity_factor"],
+                    "top_lateral": geo["top"]["lateral_lengthening"],
                 }
                 plug_aspect, stomatal_aspect = fetch_from_manifest(
                     sample_paths.meshing(specifier).manifest.require(),
@@ -60,6 +69,10 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
                     "target_plug_aspect": target_plug_aspect,
                     "specifier": specifier,
                     "solver": "photoactive",
+                    "surface_tortuosity_factor": geo["surfaces"]["tortuosity_factor"],
+                    "surface_lateral": geo["surfaces"]["lateral_lengthening"],
+                    "top_tortuosity_factor": geo["top"]["tortuosity_factor"],
+                    "top_lateral": geo["top"]["lateral_lengthening"],
                 }
                 plug_aspect, stomatal_aspect = fetch_from_manifest(
                     sample_paths.meshing(specifier).manifest.require(),

@@ -19,6 +19,7 @@ from .commands.sample import (
     triangulate,
 )
 from .commands.search import (
+    analyze_geometry,
     compile_index,
     compile_solutions,
     gen_candidates,
@@ -138,6 +139,7 @@ def _build_parser() -> argparse.ArgumentParser:
         # the envoked command is stored under args.search_command
     )
     gen_candidates.add_parser(search_subparsers)
+    analyze_geometry.add_parser(search_subparsers)
     compile_index.add_parser(search_subparsers)
     show_index.add_parser(search_subparsers)
     update_selected.add_parser(search_subparsers)

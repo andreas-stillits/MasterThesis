@@ -133,6 +133,10 @@ class SynthesisPaths(ProcessPaths):
     def snapshot(self) -> Path:
         return self.root / "rng_snapshot.json"
 
+    @path_field(kind="file")
+    def geometry(self) -> Path:
+        return self.root / "geometry.json"
+
 
 class TriangulationPaths(ProcessPaths):
     @path_field(kind="file")
