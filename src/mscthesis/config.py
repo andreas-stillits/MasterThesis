@@ -132,12 +132,11 @@ class ScanningConfig(BaseModel):
 
     transport_min: float = 0.01
     transport_max: float = 100.0
-    transport_num: int = 10
+    transport_num: int = 11
     absorption_min: float = 0.01
     absorption_max: float = 100.0
-    absorption_num: int = 10
+    absorption_num: int = 11
     compensation: float = 0.1
-    preliminary_resistance: float = 1.0
 
 
 class PipesMakeConfig(BaseModel):

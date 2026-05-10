@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import numpy as np
 import pandas as pd
 
 from ..log import log_call
@@ -15,7 +16,9 @@ def derive_summary(df: pd.DataFrame) -> pd.DataFrame:
     ]
 
     # calculate the observed top and mean surface resistance
-    summary["assimilation_rate"] = summary["top_flux_grad"] / summary["plug_area"]
+    summary["assimilation_rate"] = np.abs(
+        summary["top_flux_grad"] / summary["plug_area"]
+    )
     summary["resistance_t"] = (
         summary["substomatal_mean"] - summary["top_mean"]
     ) / summary["assimilation_rate"]
