@@ -154,29 +154,10 @@ class MeshPaths(ProcessPaths):
         return self.root / "mesh.msh"
 
 
-class SolutionPaths(ProcessPaths):
+class DiffusionPaths(ProcessPaths):
     @path_field(kind="dir")
     def solution(self) -> Path:
         return self.root / "solution.bp"
-
-
-class SolutionsPaths(PathsBase):
-    def __init__(self, base: PathLike, name: str) -> None:
-        super().__init__(base)
-        self.name = name
-        return
-
-    @path_field(kind="dir")
-    def root(self) -> Path:
-        return self.base / self.name
-
-    @child_paths
-    def photoactive(self) -> SolutionPaths:
-        return SolutionPaths(self.root.ensure(), "photoactive")
-
-    @child_paths
-    def diffusion(self) -> SolutionPaths:
-        return SolutionPaths(self.root.ensure(), "diffusion")
 
 
 class ScanningPaths(ProcessPaths):
@@ -214,12 +195,12 @@ class SamplePaths(PathsBase):
         elif isinstance(specifier, int):
             return MeshPaths(self.root / "meshing", f"mesh_{specifier:{self.format}}")
 
-    def solutions(self, specifier: int | None = None) -> SolutionsPaths:
+    def diffusion(self, specifier: int | None = None) -> DiffusionPaths:
         if specifier is None:
-            return SolutionsPaths(self.root.ensure(), "solutions")
+            return DiffusionPaths(self.root.ensure(), "diffusion")
         elif isinstance(specifier, int):
-            return SolutionsPaths(
-                self.root / "solutions", f"solutions_{specifier:{self.format}}"
+            return DiffusionPaths(
+                self.root / "diffusion", f"diffusion_{specifier:{self.format}}"
             )
 
     def scanning(self, specifier: int | None = None) -> ScanningPaths:
@@ -280,8 +261,12 @@ class ProjectPaths(PathsBase):
         return self.base / "index.csv"
 
     @path_field(kind="file")
-    def solutions_index(self) -> Path:
-        return self.base / "solutions.csv"
+    def diffusion_index(self) -> Path:
+        return self.base / "diffusion_solutions.csv"
+
+    @path_field(kind="file")
+    def diffusion_summary(self) -> Path:
+        return self.base / "diffusion_summary.csv"
 
     def sample(self, sample_id: str) -> SamplePaths:
         return SamplePaths(self.samples.ensure(), sample_id)

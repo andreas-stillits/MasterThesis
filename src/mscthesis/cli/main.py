@@ -20,12 +20,12 @@ from .commands.sample import (
 )
 from .commands.search import (
     analyze_geometry,
+    compile_diffusion_solutions,
     compile_index,
-    compile_solutions,
+    diffusion_solve_selected,
     gen_candidates,
     mesh_selected,
     show_index,
-    solve_selected,
     triangulate_selected,
     update_selected,
 )
@@ -145,8 +145,8 @@ def _build_parser() -> argparse.ArgumentParser:
     update_selected.add_parser(search_subparsers)
     triangulate_selected.add_parser(search_subparsers)
     mesh_selected.add_parser(search_subparsers)
-    solve_selected.add_parser(search_subparsers)
-    compile_solutions.add_parser(search_subparsers)
+    diffusion_solve_selected.add_parser(search_subparsers)
+    compile_diffusion_solutions.add_parser(search_subparsers)
     return parser
 
 

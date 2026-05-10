@@ -4,9 +4,11 @@ import argparse
 import json
 from typing import Any
 
+import numpy as np
 import pandas as pd
 
 from ....config import ProjectConfig
+from ....core.diffusion import derive_summary
 from ....core.io import save_dataframe
 from ....manifest import fetch_from_manifest
 from ....paths import ProjectPaths
@@ -33,9 +35,9 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
         )
 
         for specifier in config.search.stomatal_aspect_set:
-            solutions_paths = sample_paths.solutions(specifier)
+            diffusion_paths = sample_paths.diffusion(specifier)
 
-            if solutions_paths.diffusion.manifest.exists():
+            if diffusion_paths.manifest.exists():
                 content: dict[str, Any] = {
                     "sample_id": sample_id,
                     "synthesis_type": synthesis_type,
@@ -55,49 +57,31 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
                 content["plug_aspect"] = plug_aspect
                 content["stomatal_aspect"] = stomatal_aspect
 
-                with open(solutions_paths.diffusion.manifest.path) as file:
+                with open(diffusion_paths.manifest.path) as file:
                     manifest = json.load(file)
                     meta = manifest.get("meta", {})
                     del meta["parameters"]
                     content.update(meta)
                 index.append(content)
             #
-            if solutions_paths.photoactive.manifest.exists():
-                content: dict[str, Any] = {
-                    "sample_id": sample_id,
-                    "synthesis_type": synthesis_type,
-                    "target_plug_aspect": target_plug_aspect,
-                    "specifier": specifier,
-                    "solver": "photoactive",
-                    "surface_tortuosity_factor": geo["surfaces"]["tortuosity_factor"],
-                    "surface_lateral": geo["surfaces"]["lateral_lengthening"],
-                    "top_tortuosity_factor": geo["top"]["tortuosity_factor"],
-                    "top_lateral": geo["top"]["lateral_lengthening"],
-                }
-                plug_aspect, stomatal_aspect = fetch_from_manifest(
-                    sample_paths.meshing(specifier).manifest.require(),
-                    "plug_aspect",
-                    "stomatal_aspect",
-                )
-                content["plug_aspect"] = plug_aspect
-                content["stomatal_aspect"] = stomatal_aspect
-                with open(solutions_paths.photoactive.manifest.path) as file:
-                    manifest = json.load(file)
-                    meta = manifest.get("meta", {})
-                    del meta["parameters"]
-                    content.update(meta)
-                index.append(content)
+            else:
+                continue
 
     df = pd.DataFrame(index)
     df.reset_index(drop=True, inplace=True)
-    save_dataframe(paths.solutions_index.path, df)
+    save_dataframe(paths.diffusion_index.path, df)
+
+    #
+    summary = derive_summary(df)
+    save_dataframe(paths.diffusion_summary.path, summary)
 
     return
 
 
 def add_parser(subparsers: argparse._SubParsersAction) -> None:
     parser = subparsers.add_parser(
-        "compile-solutions", help="Compile selected solutions results from search"
+        "compile-diffusion-solutions",
+        help="Compile selected diffusion solutions results from search",
     )
     parser.set_defaults(cmd=_cmd)
     return
