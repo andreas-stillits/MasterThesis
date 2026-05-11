@@ -104,4 +104,5 @@ def plot_scanning_results(
         save(fig6, out / "error_mesophyll.pdf")
     if show:
         plt.show()
+    plt.close("all")
     return
