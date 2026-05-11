@@ -4,6 +4,7 @@ from typing import Any
 
 import numpy as np
 import scipy
+from stillib_random import from_seed
 
 from ..log import log_call
 
@@ -156,9 +157,9 @@ def sample_zplane(
     target_mask = np.isclose(valid_points[:, 2], target)
     target_points = valid_points[target_mask]
     if n_samples is not None and target_points.shape[0] > n_samples:
-        indices = np.random.choice(
-            target_points.shape[0], size=n_samples, replace=False
-        )
+        root = from_seed(123456)
+        rng = root.generator()
+        indices = rng.choice(target_points.shape[0], size=n_samples, replace=False)
         target_points = target_points[indices]
 
     return target_points
@@ -192,9 +193,9 @@ def sample_surfaces(
                                     surface_mask[ii, jj, kk] = True
     surface_points = all_points[surface_mask.ravel()]
     if n_samples is not None and surface_points.shape[0] > n_samples:
-        indices = np.random.choice(
-            surface_points.shape[0], size=n_samples, replace=False
-        )
+        root = from_seed(123456)
+        rng = root.generator()
+        indices = rng.choice(surface_points.shape[0], size=n_samples, replace=False)
         surface_points = surface_points[indices]
 
     return surface_points
