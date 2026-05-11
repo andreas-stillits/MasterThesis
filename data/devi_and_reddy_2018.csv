@@ -1,0 +1,11 @@
+genotype	surface	SD low VPD	SD low VPD error	SD high VPD	SD high VPD error	AL low VPD	AL low VPD error	AL high VPD	AL high VPD error	AW low VPD	AW low VPD error	AW high VPD	AW high VPD error
+OL220	adaxial	150	6,02	257	9,32	13,2	1,25	7,1	1,98	3,93	0,08	4,69	0,11
+LKT-57	adaxial	160	8,08	285	11,1	15,9	1,58	8,18	2,15	3,33	0,05	3,95	0,1
+06-46-153P	adaxial	120	8,05	240	10,3	20,5	2,01	12,7	1,74	3,72	0,09	4,82	0,07
+CS-50	adaxial	129	6,52	140	10,2	16,2	1,02	13,3	1,38	3,87	0,1	4,97	0,09
+Siokra-L23	adaxial	100	5,29	213	9,3	19,8	2,05	15,1	1,98	3,77	0,09	4,86	0,1
+OL220	abaxial	280	8,02	383	11,1	7,09	0,89	9,0	0,99	4,56	0,15	3,01	0,08
+LKT-57	abaxial	280	5,29	400	9,3	12,1	1,45	14,3	1,56	3,43	0,09	2,89	0,21
+06-46-153P	abaxial	244	6,02	343	9,32	14,1	0,85	15,0	1,46	4,32	0,12	2,41	0,09
+CS-50	abaxial	250	8,02	260	10,3	14,6	0,98	15,7	1,78	3,68	0,1	2,03	0,09
+Siokra-L23	abaxial	200	6,02	267	8,3	13,5	1,05	14,3	2,19	4,8	0,09	4,66	0,11

@@ -1,0 +1,9 @@
+{
+    "origin": "Liu et al. 2018",
+    "doi": "10.1111/1365-2435.12973",
+    "units": "stomata per mm2",
+    "density_min": 8.93,
+    "density_mean": 189.56,
+    "density_max": 632.44,
+    "log_norm_fwhm": 0.5
+}
