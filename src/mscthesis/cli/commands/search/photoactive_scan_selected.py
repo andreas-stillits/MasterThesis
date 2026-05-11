@@ -64,7 +64,7 @@ def execute_scanning(sample_id: str) -> None:
         raise ValueError(
             f"No diffusion summary found for sample_id: {sample_id} in diffusion_summary.csv"
         )
-    preliminary_resistance = float(sample_summary.iloc[0]["resistance_m"])
+    preliminary_resistance = float(sample_summary.iloc[0]["resistance_m"]) / 1.5
 
     for specifier in config.search.stomatal_aspect_set:
         scanning_paths = sample_paths.scanning(specifier)
@@ -106,7 +106,6 @@ def execute_scanning(sample_id: str) -> None:
                 content = {
                     "sample_id": sample_id,
                     "specifier": specifier,
-                    "transport": transport,
                     "absorption": absorption,
                     "compensation": compensation,
                     "chii": chii,
@@ -155,7 +154,6 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
     report = collect(
         selected_ids,
         execute_scanning,
-        max_workers=config.max_workers,
         initializer=initializer,
         initargs=(config, args.force),
         progress_callback=print_progress,
