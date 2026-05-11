@@ -72,9 +72,8 @@ class TriangulationConfig(BaseModel):
     spacing: tuple[float, float, float] = (1.0, 1.0, 1.0)
     freecad_cmd: str = "freecadcmd-daily"
     freecad_script_path: str = (
-        "/home/andreasstillits/coding/master/src/mscthesis/core/meshing/breping.py"
+        "/home/andreasstillits/coding/MasterThesis/src/mscthesis/core/meshing/breping.py"
     )
-
 
 class MeshFieldConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -132,10 +131,10 @@ class ScanningConfig(BaseModel):
 
     transport_min: float = 0.01
     transport_max: float = 100.0
-    transport_num: int = 11
+    transport_num: int = 2
     absorption_min: float = 0.01
     absorption_max: float = 100.0
-    absorption_num: int = 11
+    absorption_num: int = 2
     compensation: float = 0.1
 
 

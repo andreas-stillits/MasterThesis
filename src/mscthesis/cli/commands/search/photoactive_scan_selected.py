@@ -149,7 +149,8 @@ def execute_scanning(sample_id: str) -> None:
 def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
     paths = ProjectPaths(config.behavior.storage_root)
     index = load_dataframe(paths.index.require())
-    selected_ids = index[index["selected"]]["sample_id"].tolist()
+    # selected_ids = index[index["selected"]]["sample_id"].tolist()
+    selected_ids = ["00001"]
 
     report = collect(
         selected_ids,
