@@ -7,7 +7,7 @@ from typing import Any
 from stillib_parallelism import collect, print_progress
 
 from ....config import ProjectConfig
-from ....core.geo import geometry
+from ....core.geo import geometry, sample_surfaces
 from ....core.io import load_voxels
 from ....paths import ProjectPaths
 
@@ -28,6 +28,7 @@ def analyze_geometry(sample_id: str) -> None:
         voxel_path = paths.synthesis.voxels.require()
         voxels = load_voxels(voxel_path)
         geo: dict[str, Any] = geometry(voxels, n_samples=1000)
+
         paths.synthesis.geometry.path.write_text(
             json.dumps(geo, indent=4, default=str), encoding="utf-8"
         )
@@ -41,7 +42,7 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
     candidates = [p for p in paths.candidates.path.iterdir() if p.is_dir()]
     candidate_ids = [c.name for c in candidates if c.name.isdigit()]
 
-    report = collect(
+    collect(
         candidate_ids,
         analyze_geometry,
         max_workers=config.max_workers,
