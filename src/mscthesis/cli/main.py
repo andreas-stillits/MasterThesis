@@ -22,6 +22,7 @@ from .commands.search import (
     analyze_geometry,
     compile_diffusion_solutions,
     compile_index,
+    compile_photoactive_scans,
     diffusion_solve_selected,
     gen_candidates,
     mesh_selected,
@@ -149,6 +150,7 @@ def _build_parser() -> argparse.ArgumentParser:
     diffusion_solve_selected.add_parser(search_subparsers)
     compile_diffusion_solutions.add_parser(search_subparsers)
     photoactive_scan_selected.add_parser(search_subparsers)
+    compile_photoactive_scans.add_parser(search_subparsers)
     return parser
 
 

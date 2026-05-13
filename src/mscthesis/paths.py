@@ -256,17 +256,29 @@ class ProjectPaths(PathsBase):
     def failures(self) -> Path:
         return self.base / "failures"
 
+    @path_field(kind="dir")
+    def results(self) -> Path:
+        return self.base / "results"
+
     @path_field(kind="file")
     def index(self) -> Path:
         return self.base / "index.csv"
 
     @path_field(kind="file")
     def diffusion_index(self) -> Path:
-        return self.base / "diffusion_solutions.csv"
+        return self.results.ensure() / "diffusion_solutions.csv"
 
     @path_field(kind="file")
     def diffusion_summary(self) -> Path:
-        return self.base / "diffusion_summary.csv"
+        return self.results.ensure() / "diffusion_summary.csv"
+
+    @path_field(kind="file")
+    def photoactive_index(self) -> Path:
+        return self.results.ensure() / "photoactive_scans.csv"
+
+    @path_field(kind="file")
+    def photoactive_summary(self) -> Path:
+        return self.results.ensure() / "photoactive_summary.csv"
 
     def sample(self, sample_id: str) -> SamplePaths:
         return SamplePaths(self.samples.ensure(), sample_id)
