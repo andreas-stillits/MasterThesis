@@ -71,9 +71,6 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
         if not path.exists():
             print(f"File {path} does not exist.")
             return
-        if not path.is_file():
-            print(f"Path {path} is not a file.")
-            return
         #
         if path.suffix == ".npy":
             voxels = load_voxels(path)

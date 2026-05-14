@@ -26,18 +26,6 @@ def derive_summary(df: pd.DataFrame) -> pd.DataFrame:
         np.sqrt(summary["airspace_var"]) / summary["airspace_mean"]
     )
 
-    # define the pipe resistance for each sample id as the resistance where specifier == 0
-    sample_ids = summary["sample_id"].unique()
-    for sample_id in sample_ids:
-        specifier_0 = summary[
-            (summary["sample_id"] == sample_id) & (summary["specifier"] == 0)
-        ]
-        if not specifier_0.empty:
-            pipe_resistance_m = specifier_0["resistance_m"].values[0]
-            summary.loc[summary["sample_id"] == sample_id, "pipe_resistance_m"] = (
-                pipe_resistance_m
-            )
-
     # filter the dataframe for clarity
     summary = summary[
         [
@@ -55,7 +43,6 @@ def derive_summary(df: pd.DataFrame) -> pd.DataFrame:
             "assimilation_substomatal",
             "assimilation_mesophyll_mean",
             "resistance_m",
-            "pipe_resistance_m",
             "stomatal_area_fraction",
             "mesophyll_area_fraction",
             "plug_area",
