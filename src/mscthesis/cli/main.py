@@ -20,6 +20,7 @@ from .commands.sample import (
 )
 from .commands.search import (
     analyze_geometry,
+    compile_collection,
     compile_diffusion_solutions,
     compile_index,
     compile_photoactive_scans,
@@ -151,6 +152,7 @@ def _build_parser() -> argparse.ArgumentParser:
     compile_diffusion_solutions.add_parser(search_subparsers)
     photoactive_scan_selected.add_parser(search_subparsers)
     compile_photoactive_scans.add_parser(search_subparsers)
+    compile_collection.add_parser(search_subparsers)
     return parser
 
 

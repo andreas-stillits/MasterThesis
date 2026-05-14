@@ -280,6 +280,10 @@ class ProjectPaths(PathsBase):
     def photoactive_summary(self) -> Path:
         return self.results.ensure() / "photoactive_summary.csv"
 
+    @path_field(kind="file")
+    def collection(self) -> Path:
+        return self.results.ensure() / "collection.csv"
+
     def sample(self, sample_id: str) -> SamplePaths:
         return SamplePaths(self.samples.ensure(), sample_id)
 

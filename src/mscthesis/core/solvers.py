@@ -167,6 +167,7 @@ class BaseSolver:
         # photoactive simplified assumptions predictions
         assimilation_substomatal = 0.0
         assimilation_mesophyll_mean = 0.0
+        surface_centroid = 0.0
         if self.mesophyll_area > 0.0:
             assimilation_substomatal = _integral(
                 self.surface_coeff * (substomatal_mean - self.compensation),  # type: ignore
@@ -175,6 +176,12 @@ class BaseSolver:
             assimilation_mesophyll_mean = _integral(
                 self.surface_coeff * (mesophyll_mean - self.compensation),  # type: ignore
                 self.ds(self.tags.MESOPHYLL),
+            )
+            # calculate (1-z) weighted by surface area
+            x = ufl.SpatialCoordinate(self.mesh_ctx.mesh)
+            surface_centroid = (
+                _integral((1.0 - x[2]), self.ds(self.tags.MESOPHYLL))  # type: ignore
+                / self.mesophyll_area
             )
 
         return {
@@ -199,6 +206,7 @@ class BaseSolver:
             "stomatal_area_fraction": self.stomatal_area_fraction,
             "mesophyll_area_fraction": self.mesophyll_area_fraction,
             "porosity": self.porosity,
+            "surface_centroid": surface_centroid,
             "assimilation_substomatal": assimilation_substomatal,
             "assimilation_mesophyll_mean": assimilation_mesophyll_mean,
         }
@@ -221,7 +229,9 @@ class PhotoactiveSolver(BaseSolver):
 
         a = ufl.inner(ufl.grad(chi), ufl.grad(v)) * self.dx(
             self.tags.AIRSPACE
-        ) + self.surface_coeff * chi * v * self.ds(self.tags.MESOPHYLL)  # type: ignore
+        ) + self.surface_coeff * chi * v * self.ds(
+            self.tags.MESOPHYLL
+        )  # type: ignore
         L = self.surface_coeff * self.compensation * v * self.ds(self.tags.MESOPHYLL)  # type: ignore
 
         bc_inlet = fem.dirichletbc(self.chii, self.inlet_dofs, self.functionspace)

@@ -75,6 +75,7 @@ class TriangulationConfig(BaseModel):
         "/home/andreasstillits/coding/MasterThesis/src/mscthesis/core/meshing/breping.py"
     )
 
+
 class MeshFieldConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -240,7 +241,7 @@ class ProjectConfig(BaseModel):
     scanning: ScanningConfig = ScanningConfig()
     pipes: PipesConfig = PipesConfig()
     search: SearchConfig = SearchConfig()
-    max_workers: int = 8
+    max_workers: int = 2
 
     def dump_json(self) -> str:
         return json.dumps(self.model_dump(), indent=4, default=str)

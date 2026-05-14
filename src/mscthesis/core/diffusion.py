@@ -94,6 +94,7 @@ def derive_summary(df: pd.DataFrame) -> pd.DataFrame:
             "stomatal_area_fraction",
             "mesophyll_area_fraction",
             "plug_area",
+            "surface_centroid",
         ]
     ]
 
