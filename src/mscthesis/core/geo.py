@@ -206,6 +206,7 @@ def geometry(voxels: np.ndarray, n_samples: int | None = None) -> dict[str, Any]
     results: dict[str, Any] = {}
 
     geo, euc, valid_points = compute_geodesics(voxels)
+
     tor, lat = compute_for_targets(
         sample_surfaces(voxels, n_samples=n_samples), geo, euc, valid_points
     )

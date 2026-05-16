@@ -3,5 +3,6 @@ tmp/
 .treasury/
 .backup/
 .final/
+.testing/
 **/*.egg-info/
 **/__pycache__/ 

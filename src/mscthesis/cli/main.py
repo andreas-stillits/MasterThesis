@@ -25,7 +25,8 @@ from .commands.search import (
     compile_index,
     compile_photoactive_scans,
     diffusion_solve_selected,
-    gen_candidates,
+    gen_candidates_metaballs,
+    gen_candidates_mixed,
     mesh_selected,
     photoactive_scan_selected,
     show_index,
@@ -141,7 +142,8 @@ def _build_parser() -> argparse.ArgumentParser:
         required=True,
         # the envoked command is stored under args.search_command
     )
-    gen_candidates.add_parser(search_subparsers)
+    gen_candidates_metaballs.add_parser(search_subparsers)
+    gen_candidates_mixed.add_parser(search_subparsers)
     analyze_geometry.add_parser(search_subparsers)
     compile_index.add_parser(search_subparsers)
     show_index.add_parser(search_subparsers)

@@ -67,8 +67,8 @@ def create_candidate(taskstream: TaskStream) -> None:
     paths = ProjectPaths(config.behavior.storage_root).candidate_sample(
         candidate.sample_id
     )
-    paths.synthesis.root.ensure()
-    cursor.save_snapshot(paths.synthesis.snapshot.path)
+    snapshot = cursor.snapshot()
+
     #
     voxels, manifest = generate_voxels_from_rng(
         rng,
@@ -82,6 +82,8 @@ def create_candidate(taskstream: TaskStream) -> None:
     )
 
     # io
+    paths.synthesis.root.ensure()
+    cursor.save_snapshot(paths.synthesis.snapshot.path, snapshot)
     save_voxels(paths.synthesis.voxels.path, voxels)
 
     # config
@@ -100,7 +102,7 @@ def create_candidate(taskstream: TaskStream) -> None:
     # manifest
     dump_manifest(
         paths.synthesis.manifest.path,
-        command_name="gen-candidates",
+        command_name="gen-candidates-mixed",
         sample_id=candidate.sample_id,
         inputs={},
         outputs={"voxels": paths.synthesis.voxels.path},
@@ -143,7 +145,7 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
 
 def add_parser(subparsers: argparse._SubParsersAction) -> None:
     parser = subparsers.add_parser(
-        "gen-candidates", help="Generate candidate configurations for search"
+        "gen-candidates-mixed", help="Generate candidate configurations for search"
     )
     parser.set_defaults(cmd=_cmd)
     return

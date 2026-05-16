@@ -20,7 +20,7 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
     index = load_dataframe(paths.index.require())
     plug_aspect_set = config.search.plug_aspect_set.values()
     gridsize = config.search.selected.porosity_gridsize
-    porosity_set = np.arange(0.0, 1.0, gridsize)
+    porosity_set = np.arange(0.20, 1.0, gridsize)
 
     for plug_aspect in plug_aspect_set:
         df = index[index["plug_aspect"] == plug_aspect]

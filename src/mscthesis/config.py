@@ -42,10 +42,12 @@ class SynthesizeMixedConfig(BaseModel):
 class SynthesizeMetaBallsConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    num_cells: int = 200
+    num_cells: int = 100
     radius_min: float = 0.04
     radius_max: float = 0.06
-    threshold: float = 4.2
+    factor: float = 1.50
+    power: float = 4.0
+    threshold: float = 1.0
 
 
 class SynthesisConfig(BaseModel):
@@ -201,7 +203,7 @@ class SelectedConfig(BaseModel):
             "max_attempts": 4,
         }
     }
-    porosity_gridsize: float = 0.10
+    porosity_gridsize: float = 0.20
     porous_inlet_specifier: int = 0
 
 
@@ -241,7 +243,7 @@ class ProjectConfig(BaseModel):
     scanning: ScanningConfig = ScanningConfig()
     pipes: PipesConfig = PipesConfig()
     search: SearchConfig = SearchConfig()
-    max_workers: int = 2
+    max_workers: int = 12
 
     def dump_json(self) -> str:
         return json.dumps(self.model_dump(), indent=4, default=str)

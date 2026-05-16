@@ -7,7 +7,7 @@ from typing import Any
 from stillib_parallelism import collect, print_progress
 
 from ....config import ProjectConfig
-from ....core.geo import geometry, sample_surfaces
+from ....core.geo import geometry
 from ....core.io import load_voxels
 from ....paths import ProjectPaths
 
@@ -27,6 +27,7 @@ def analyze_geometry(sample_id: str) -> None:
     if not paths.synthesis.geometry.exists() or force:
         voxel_path = paths.synthesis.voxels.require()
         voxels = load_voxels(voxel_path)
+
         geo: dict[str, Any] = geometry(voxels, n_samples=1000)
 
         paths.synthesis.geometry.path.write_text(

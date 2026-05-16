@@ -6,6 +6,7 @@ import numpy as np
 from stillib_random import from_seed
 
 from ...log import log_call
+from ..geo import compute_geodesics
 from .utils import (
     get_sample_seed,
     initialize_meshgrid,
@@ -14,7 +15,6 @@ from .utils import (
 
 @log_call()
 def _metadata(
-    random_seed: int,
     plug_aspect: float,
     centers: np.ndarray,
     radii: np.ndarray,
@@ -34,7 +34,6 @@ def _metadata(
         dict[str, Any]: Metadata dictionary.
     """
     metadata: dict[str, Any] = {}
-    metadata["random_seed"] = random_seed
     metadata["plug_aspect"] = plug_aspect
     metadata["num_cells_placed"] = len(centers)
     metadata["min_radius"] = float(np.min(radii)) if len(radii) > 0 else 0.0
@@ -52,16 +51,25 @@ def _metadata(
     metadata["mesophyll_area_fraction"] = float(
         len(centers) * 4 * np.sum(radii**2) / plug_aspect**2
     )
-    metadata["type"] = "mixed"
+    metadata["type"] = "metaballs"
     return metadata
 
 
 def _distance_field(
-    X: np.ndarray, Y: np.ndarray, Z: np.ndarray, center: np.ndarray, radius: float
+    X: np.ndarray,
+    Y: np.ndarray,
+    Z: np.ndarray,
+    center: np.ndarray,
+    radius: float,
+    factor: float,
+    power: float,
 ) -> np.ndarray:
-    return radius**2 / (
-        (X - center[0]) ** 2 + (Y - center[1]) ** 2 + (Z - center[2]) ** 2
-    )
+    dist = np.sqrt((X - center[0]) ** 2 + (Y - center[1]) ** 2 + (Z - center[2]) ** 2)
+    field = radius / (dist + 1e-8)  # add small epsilon to avoid division by zero
+    field = field**power
+    mask = dist > factor * radius
+    field[mask] = 0.0
+    return field
 
 
 @log_call()
@@ -74,6 +82,8 @@ def generate_voxels_from_seed(
     num_cells: int,
     radius_min: float,
     radius_max: float,
+    factor: float,
+    power: float,
     threshold: float,
 ) -> tuple[np.ndarray[tuple[int, int, int]], dict[str, Any]]:
     """
@@ -88,6 +98,8 @@ def generate_voxels_from_seed(
         num_cells (int): Number of cells (spheres) to place in the model.
         radius_min (float): Minimum radius of the cells (spheres).
         radius_max (float): Maximum radius of the cells (spheres).
+        factor (float): Factor for scaling the metaball field.
+        power (float): Power for raising the metaball field.
         threshold (float): Threshold for binarizing the voxel grid.
     Returns:
         np.ndarray: 3D numpy array of shape (planar_resolution, planar_resolution, resolution).
@@ -115,6 +127,7 @@ def generate_voxels_from_seed(
         attempts = 0
         while attempts < max_attempts:
             # draw random cell center
+            attempts += 1
             center = np.array(
                 [
                     rng.uniform(-max_r, max_r),
@@ -137,16 +150,10 @@ def generate_voxels_from_seed(
                 attempts += 1
                 continue
 
-            # check for overlaps
-            if np.all(
-                np.linalg.norm(centers[:i] - center, axis=1)
-                > (radii[:i] + radius + separation)
-            ):
-                centers[i] = center
-                radii[i] = radius
-                field += _distance_field(X, Y, Z, center, radius)
-                break
-            attempts += 1
+            centers[i] = center
+            radii[i] = radius
+            field += _distance_field(X, Y, Z, center, radius, factor, power)
+            break
 
         else:  # executed only if while loop is not stopped by break - then we dont attempt to place any further spheres
             break  # break out of the for loop
@@ -159,7 +166,6 @@ def generate_voxels_from_seed(
     radii = radii[radii > 0]
 
     metadata = _metadata(
-        random_seed,
         plug_aspect,
         centers,
         radii,
@@ -180,6 +186,8 @@ def generate_voxels_from_sample_id(
     num_cells: int,
     radius_min: float,
     radius_max: float,
+    factor: float,
+    power: float,
     threshold: float,
 ) -> tuple[np.ndarray[tuple[int, int, int]], dict[str, Any]]:
     """
@@ -195,6 +203,8 @@ def generate_voxels_from_sample_id(
         num_cells (int): Number of cells (spheres) to place in the model.
         radius_min (float): Minimum radius of the cells.
         radius_max (float): Maximum radius of the cells.
+        factor (float): Factor for scaling the metaball field.
+        power (float): Power for raising the metaball field.
         threshold (float): Threshold for binarizing the voxel grid.
     Returns:
         np.ndarray: 3D numpy array of shape (planar_resolution, planar_resolution, resolution)
@@ -215,7 +225,129 @@ def generate_voxels_from_sample_id(
         num_cells,
         radius_min,
         radius_max,
+        factor,
+        power,
         threshold,
+    )
+
+    return voxels, metadata
+
+
+# ================================================================================
+#                              SEARCH FUNCTIONALITY
+# ================================================================================
+
+
+def generate_voxels_from_rng(
+    rng: np.random.Generator,
+    resolution: int,
+    plug_aspect: float,
+    separation: float,
+    max_attempts: int,
+    num_cells: int,
+    radius_min: float,
+    radius_max: float,
+    factor: float,
+    power: float,
+    threshold: float,
+) -> tuple[np.ndarray[tuple[int, int, int]], dict[str, Any]]:
+    """
+    Generate uniform swiss cheese voxel model for a given random seed.
+
+    Args:
+        rng (np.random.Generator): Random number generator instance.
+        resolution (int): Number of voxels along each axis.
+        plug_aspect (float): Ratio of plug radius to plug thickness/height.
+        separation (float): Minimum separation distance between cells and boundaries.
+        max_attempts (int): Maximum number of attempts to place each cell.
+        num_cells (int): Number of cells (spheres) to place in the model.
+        radius_min (float): Minimum radius of the cells (spheres).
+        radius_max (float): Maximum radius of the cells (spheres).
+        factor (float): Factor for scaling the metaball field.
+        power (float): Power for raising the metaball field.
+        threshold (float): Threshold for binarizing the voxel grid.
+    Returns:
+        np.ndarray: 3D numpy array of shape (planar_resolution, planar_resolution, resolution).
+        dict[str, Any]: Metadata dictionary.
+    """
+
+    field, (X, Y, Z) = initialize_meshgrid(plug_aspect, resolution, dtype="float32")
+
+    # initialize cell lists and determine placement boundaries
+    centers = np.zeros((num_cells, 3))
+    radii = np.zeros((num_cells,))
+    max_r = plug_aspect - radius_min - separation
+    min_z = radius_min + separation
+    max_z = 1 - radius_min - separation
+
+    if max_r <= 0:
+        raise ValueError(
+            f"Cell size {radius_min} and separation {separation} too large for given plug aspect {plug_aspect}."
+        )
+
+    # placement of cells
+    for i in range(num_cells):
+        attempts = 0
+        while attempts < max_attempts:
+            # draw random cell center
+            attempts += 1
+            center = np.array(
+                [
+                    rng.uniform(-max_r, max_r),
+                    rng.uniform(-max_r, max_r),
+                    rng.uniform(min_z, max_z),
+                ]
+            )
+
+            # draw random cell radius
+            radius = rng.uniform(radius_min, radius_max)
+
+            # enforce cyllindrical boundary
+            if np.linalg.norm(center[:2]) + radius - radius_min > max_r:
+                attempts += 1
+                continue
+            if (
+                center[2] + radius - radius_min > max_z
+                or center[2] - radius + radius_min < min_z
+            ):
+                attempts += 1
+                continue
+
+            centers[i] = center
+            radii[i] = radius
+            field += _distance_field(X, Y, Z, center, radius, factor, power)
+            break
+
+        else:  # executed only if while loop is not stopped by break - then we dont attempt to place any further spheres
+            break  # break out of the for loop
+
+    # threshold the voxels to binary values
+    voxels = (field > threshold).astype(np.uint8)
+
+    # remove cells where radius is still zero (not placed)
+    centers = centers[radii > 0]
+    radii = radii[radii > 0]
+
+    # mask unconnected airspaces as solid
+
+    geo, _, _ = compute_geodesics(voxels)
+
+    padded_geo = np.full(voxels.size, np.inf)
+    padded_geo[(voxels.ravel() == 0)] = geo
+    mask = np.isinf(padded_geo).reshape(voxels.shape)
+    voxels[mask] = 1  # mark as solid
+
+    geo, _, _ = compute_geodesics(voxels)
+    assert not np.any(np.isinf(geo)), "Unable to remove unconnected airspaces"
+
+    porosity = 1.0 - float(np.sum(voxels) / (np.pi / 4 * voxels.size))
+    assert porosity > 0.20, "Porosity below 20%, likely degenerate geometry"
+
+    metadata = _metadata(
+        plug_aspect,
+        centers,
+        radii,
+        voxels,
     )
 
     return voxels, metadata
