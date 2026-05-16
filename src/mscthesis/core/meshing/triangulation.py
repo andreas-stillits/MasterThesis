@@ -26,6 +26,7 @@ def _clean_mesh(mesh: o3d.geometry.TriangleMesh) -> o3d.geometry.TriangleMesh:
     mesh.remove_degenerate_triangles()
     mesh.remove_unreferenced_vertices()
     mesh.remove_non_manifold_edges()
+    mesh.orient_triangles()
     mesh.compute_vertex_normals()
     return mesh
 
@@ -100,9 +101,15 @@ def triangulate_voxels(
         o3d.geometry.TriangleMesh: The triangulated mesh.
         dict: Metadata including number of vertices and faces.
     """
+    # pad the voxels with a layer of zeros to ensure proper surface extraction at the boundaries
+    voxels = np.pad(voxels, pad_width=1, constant_values=0)
+
     # apply marching cubes algorithm
     verts, faces, normals, values = measure.marching_cubes(
-        voxels, spacing=spacing, level=0.5
+        voxels,
+        spacing=spacing,
+        level=0.5,
+        allow_degenerate=False,
     )
     mesh = o3d.geometry.TriangleMesh()
     mesh.vertices = o3d.utility.Vector3dVector(verts)
