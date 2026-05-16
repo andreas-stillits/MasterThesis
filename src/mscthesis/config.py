@@ -70,7 +70,7 @@ class TriangulationConfig(BaseModel):
 
     smoothing_iterations: int = 5
     elements_per_cell: int = 150
-    shrinkage_tolerance: float = 0.10
+    shrinkage_tolerance: float = 0.15
     spacing: tuple[float, float, float] = (1.0, 1.0, 1.0)
     freecad_cmd: str = "freecadcmd-daily"
     freecad_script_path: str = (
@@ -203,7 +203,7 @@ class SelectedConfig(BaseModel):
             "max_attempts": 4,
         }
     }
-    porosity_gridsize: float = 0.20
+    porosity_gridsize: float = 0.10
     porous_inlet_specifier: int = 0
 
 
