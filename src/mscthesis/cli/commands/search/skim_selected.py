@@ -32,8 +32,12 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
         if confirm.lower() == "y":
             for sample_id in deletion_ids:
                 root = paths.selected_sample(sample_id).root.path
-                # this is a directory containing files
-                # delete the files and the directory itself
+                for item in root.iterdir():
+                    if item.is_file():
+                        item.unlink()
+                root.rmdir()
+                #
+                root = paths.candidate_sample(sample_id).root.path
                 for item in root.iterdir():
                     if item.is_file():
                         item.unlink()
