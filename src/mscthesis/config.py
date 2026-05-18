@@ -21,7 +21,7 @@ class BehaviorConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     storage_root: Path = (
-        Path.home() / "coding" / "MasterThesis" / ".backup" / "fused_only"
+        Path.home() / "coding" / "MasterThesis" / ".treasury"
     )
     sample_id_digits: int = 5
 
