@@ -20,9 +20,7 @@ class MetaConfig(BaseModel):
 class BehaviorConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    storage_root: Path = (
-        Path.home() / "coding" / "MasterThesis" / ".treasury"
-    )
+    storage_root: Path = Path.home() / "coding" / "MasterThesis" / ".treasury"
     sample_id_digits: int = 5
 
 
@@ -49,7 +47,7 @@ class SynthesizeMetaBallsConfig(BaseModel):
     radius_max: float = 0.06
     factor: float = 2.0
     power: float = 4.0
-    threshold: float = 0.60
+    threshold: float = 0.75
 
 
 class SynthesisConfig(BaseModel):
@@ -243,7 +241,7 @@ class ProjectConfig(BaseModel):
     scanning: ScanningConfig = ScanningConfig()
     pipes: PipesConfig = PipesConfig()
     search: SearchConfig = SearchConfig()
-    max_workers: int = 8
+    max_workers: int = 14
 
     def dump_json(self) -> str:
         return json.dumps(self.model_dump(), indent=4, default=str)
