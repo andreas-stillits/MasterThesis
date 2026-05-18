@@ -313,10 +313,15 @@ def generate_voxels_from_rng(
                 attempts += 1
                 continue
 
-            centers[i] = center
-            radii[i] = radius
-            field += _distance_field(X, Y, Z, center, radius, factor, power)
-            break
+            # check for overlaps
+            if np.all(
+                np.linalg.norm(centers[:i] - center, axis=1)
+                > (radii[:i] + radius + separation)
+            ):
+                centers[i] = center
+                radii[i] = radius
+                field += _distance_field(X, Y, Z, center, radius, factor, power)
+                break
 
         else:  # executed only if while loop is not stopped by break - then we dont attempt to place any further spheres
             break  # break out of the for loop

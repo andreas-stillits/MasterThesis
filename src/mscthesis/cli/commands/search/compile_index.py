@@ -35,14 +35,6 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
             "mean_porosity",
             "type",
         )
-        geo: dict[str, Any] = json.loads(
-            paths.candidate_sample(sample_id)
-            .synthesis.geometry.require()
-            .read_text(encoding="utf-8")
-        )
-        tortuosity_factor = geo["surfaces"]["tortuosity_factor"]
-        lateral = geo["surfaces"]["lateral_lengthening"]
-        geometry_factor = tortuosity_factor * lateral / porosity
         #
         in_selected = sample_id in selected_ids
         #
@@ -51,7 +43,6 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
                 "sample_id": sample_id,
                 "plug_aspect": plug_aspect,
                 "porosity": porosity,
-                "geometry_factor": geometry_factor,
                 "type": type,
                 "selected": in_selected,
             }

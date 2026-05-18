@@ -214,6 +214,7 @@ def geometry(voxels: np.ndarray, n_samples: int | None = None) -> dict[str, Any]
         "tortuosity": np.mean(tor),
         "tortuosity_factor": np.mean(tor**2),
         "lateral_lengthening": np.mean(lat),
+        "post_average": np.mean(tor**2 * lat),
     }
     results["surfaces"] = summary
     #
@@ -224,6 +225,7 @@ def geometry(voxels: np.ndarray, n_samples: int | None = None) -> dict[str, Any]
         "tortuosity": np.mean(tor),
         "tortuosity_factor": np.mean(tor**2),
         "lateral_lengthening": np.mean(lat),
+        "post_average": np.mean(tor**2 * lat),
     }
     results["top"] = summary
     return results
