@@ -3,10 +3,8 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from mscthesis.core.io import load_voxels
-from mscthesis.core.visualization import visualize_voxels
-
 from ....config import ProjectConfig
+from ....ids import validate_sample_id
 from ....paths import ProjectPaths
 
 
@@ -21,20 +19,23 @@ def delete_sample(root: Path) -> None:
 
 
 def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
-
     paths = ProjectPaths(config.behavior.storage_root)
+    # load a list of selected samples
     selected = [p for p in paths.selected.path.iterdir() if p.is_dir()]
     selected_ids = [s.name for s in selected if s.name.isdigit()]
-
     deletion_ids = []
-
-    for sample_id in selected_ids:
-        voxel_path = paths.selected_sample(sample_id).synthesis.voxels.require()
-        voxels = load_voxels(voxel_path)
-        visualize_voxels(voxels)
-        delete = input("Delete this sample? (y/n): ")
-        if delete.lower() == "y":
-            deletion_ids.append(sample_id)
+    with open(args.filename, encoding="utf-8") as f:
+        for line in f:
+            sample_id = line.strip()
+            try:
+                sample_id = validate_sample_id(
+                    sample_id, config.behavior.sample_id_digits
+                )
+            except ValueError:
+                print(f"Invalid sample ID: {sample_id}")
+                continue
+            if sample_id in selected_ids:
+                deletion_ids.append(sample_id)
     if deletion_ids:
         print("The following samples will be deleted:")
         for sample_id in deletion_ids:
@@ -55,8 +56,13 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
 
 def add_parser(subparsers: argparse._SubParsersAction) -> None:
     parser = subparsers.add_parser(
-        "skim-selected",
-        help="Skim selected samples and visualize them.",
+        "delete-selected",
+        help="Delete selected samples.",
+    )
+    parser.add_argument(
+        "filename",
+        type=str,
+        help="Path to the file containing the list of sample IDs to delete.",
     )
     parser.set_defaults(cmd=_cmd)
     return

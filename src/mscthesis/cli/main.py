@@ -24,6 +24,7 @@ from .commands.search import (
     compile_diffusion_solutions,
     compile_index,
     compile_photoactive_scans,
+    delete_selected,
     diffusion_solve_selected,
     gen_candidates_metaballs,
     gen_candidates_mixed,
@@ -146,6 +147,7 @@ def _build_parser() -> argparse.ArgumentParser:
     gen_candidates_metaballs.add_parser(search_subparsers)
     gen_candidates_mixed.add_parser(search_subparsers)
     skim_selected.add_parser(search_subparsers)
+    delete_selected.add_parser(search_subparsers)
     analyze_geometry.add_parser(search_subparsers)
     compile_index.add_parser(search_subparsers)
     show_index.add_parser(search_subparsers)

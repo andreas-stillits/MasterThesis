@@ -23,7 +23,7 @@ def initializer(config: ProjectConfig, force: bool) -> None:
 def analyze_geometry(sample_id: str) -> None:
     config: ProjectConfig = _STATE["config"]
     force: bool = _STATE["force"]
-    paths = ProjectPaths(config.behavior.storage_root).candidate_sample(sample_id)
+    paths = ProjectPaths(config.behavior.storage_root).selected_sample(sample_id)
     if not paths.synthesis.geometry.exists() or force:
         voxel_path = paths.synthesis.voxels.require()
         voxels = load_voxels(voxel_path)
@@ -39,12 +39,12 @@ def analyze_geometry(sample_id: str) -> None:
 
 def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
     paths = ProjectPaths(config.behavior.storage_root)
-    # load a list of candidate samples
-    candidates = [p for p in paths.candidates.path.iterdir() if p.is_dir()]
-    candidate_ids = [c.name for c in candidates if c.name.isdigit()]
+    # load a list of selected samples
+    selected = [p for p in paths.selected.path.iterdir() if p.is_dir()]
+    selected_ids = [c.name for c in selected if c.name.isdigit()]
 
     collect(
-        candidate_ids,
+        selected_ids,
         analyze_geometry,
         max_workers=config.max_workers,
         initializer=initializer,

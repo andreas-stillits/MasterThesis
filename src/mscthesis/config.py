@@ -70,7 +70,7 @@ class SynthesisConfig(BaseModel):
 class TriangulationConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    smoothing_iterations: int = 5
+    smoothing_iterations: int = 2
     elements_per_cell: int = 150
     shrinkage_tolerance: float = 0.15
     spacing: tuple[float, float, float] = (1.0, 1.0, 1.0)
@@ -199,8 +199,8 @@ class SelectedConfig(BaseModel):
     validation: SelectedValidationConfig = SelectedValidationConfig()
     retries: dict[str, Any] = {
         "triangulation": {
-            "elements_per_cell_increment": 25,
-            "max_attempts": 4,
+            "elements_per_cell_increment": 50,
+            "max_attempts": 8,
         }
     }
     porosity_gridsize: float = 0.10
@@ -243,7 +243,7 @@ class ProjectConfig(BaseModel):
     scanning: ScanningConfig = ScanningConfig()
     pipes: PipesConfig = PipesConfig()
     search: SearchConfig = SearchConfig()
-    max_workers: int = 12
+    max_workers: int = 8
 
     def dump_json(self) -> str:
         return json.dumps(self.model_dump(), indent=4, default=str)
