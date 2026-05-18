@@ -30,6 +30,7 @@ from .commands.search import (
     mesh_selected,
     photoactive_scan_selected,
     show_index,
+    skim_selected,
     triangulate_selected,
     update_selected,
 )
@@ -144,6 +145,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     gen_candidates_metaballs.add_parser(search_subparsers)
     gen_candidates_mixed.add_parser(search_subparsers)
+    skim_selected.add_parser(search_subparsers)
     analyze_geometry.add_parser(search_subparsers)
     compile_index.add_parser(search_subparsers)
     show_index.add_parser(search_subparsers)
