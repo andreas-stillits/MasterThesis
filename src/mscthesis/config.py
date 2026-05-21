@@ -20,9 +20,7 @@ class MetaConfig(BaseModel):
 class BehaviorConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    storage_root: Path = (
-        Path.home() / "coding" / "MasterThesis" / ".backup" / "mixed_only_180526"
-    )
+    storage_root: Path = Path.home() / "coding" / "MasterThesis" / ".treasury"
     sample_id_digits: int = 5
 
 
@@ -52,12 +50,22 @@ class SynthesizeMetaBallsConfig(BaseModel):
     threshold: float = 0.75
 
 
+class SynthesizeContrastConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    num_cells: int = 100
+    radius_min: float = 0.02
+    radius_max: float = 0.08
+    division: float = 0.20
+
+
 class SynthesisConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     uniform: SynthesizeUniformConfig = SynthesizeUniformConfig()
     mixed: SynthesizeMixedConfig = SynthesizeMixedConfig()
     metaballs: SynthesizeMetaBallsConfig = SynthesizeMetaBallsConfig()
+    contrast: SynthesizeContrastConfig = SynthesizeContrastConfig()
     base_seed: int = 123456
     resolution: int = 100
     plug_aspect: float = 0.25
@@ -181,6 +189,7 @@ class CandidateConfig(BaseModel):
     num_cells_set: list[int] = [25, 50, 100, 150, 200]
     radius_center_set: list[float] = [0.04, 0.06, 0.08, 0.10]
     radius_width: float = 0.02
+    division_set: list[float] = [0.20, 0.30, 0.40, 0.50, 0.60]
 
 
 class SelectedValidationConfig(BaseModel):
@@ -243,7 +252,7 @@ class ProjectConfig(BaseModel):
     scanning: ScanningConfig = ScanningConfig()
     pipes: PipesConfig = PipesConfig()
     search: SearchConfig = SearchConfig()
-    max_workers: int = 14
+    max_workers: int = 4
 
     def dump_json(self) -> str:
         return json.dumps(self.model_dump(), indent=4, default=str)
