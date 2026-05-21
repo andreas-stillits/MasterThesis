@@ -20,7 +20,9 @@ class MetaConfig(BaseModel):
 class BehaviorConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    storage_root: Path = Path.home() / "coding" / "MasterThesis" / ".backup"
+    storage_root: Path = (
+        Path.home() / "coding" / "MasterThesis" / ".backup" / "mixed_only_180526"
+    )
     sample_id_digits: int = 5
 
 
@@ -73,9 +75,7 @@ class TriangulationConfig(BaseModel):
     shrinkage_tolerance: float = 0.15
     spacing: tuple[float, float, float] = (1.0, 1.0, 1.0)
     freecad_cmd: str = "freecadcmd-daily"
-    freecad_script_path: str = (
-        "/home/andreasstillits/coding/MasterThesis/src/mscthesis/core/meshing/breping.py"
-    )
+    freecad_script_path: str = "/home/andreasstillits/coding/MasterThesis/src/mscthesis/core/meshing/breping.py"
 
 
 class MeshFieldConfig(BaseModel):

@@ -46,8 +46,10 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
                     "solver": "diffusion",
                     "surface_tortuosity_factor": geo["surfaces"]["tortuosity_factor"],
                     "surface_lateral": geo["surfaces"]["lateral_lengthening"],
+                    "surface_post_average": geo["surfaces"]["post_average"],
                     "top_tortuosity_factor": geo["top"]["tortuosity_factor"],
                     "top_lateral": geo["top"]["lateral_lengthening"],
+                    "top_post_average": geo["top"]["post_average"],
                 }
                 plug_aspect, stomatal_aspect = fetch_from_manifest(
                     sample_paths.meshing(specifier).manifest.require(),
