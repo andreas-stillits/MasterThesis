@@ -17,7 +17,6 @@ from ....core.io import (
     save_fem_solution,
 )
 from ....core.solvers import (
-    DiffusionSolver,
     MeshContext,
     PhotoactiveSolver,
     SolverContext,
@@ -149,7 +148,8 @@ def execute_scanning(sample_id: str) -> None:
 def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
     paths = ProjectPaths(config.behavior.storage_root)
     index = load_dataframe(paths.index.require())
-    selected_ids = index[index["selected"]]["sample_id"].tolist()
+    # selected_ids = index[index["selected"]]["sample_id"].tolist()
+    selected_ids = ["00256"]
 
     report = collect(
         selected_ids,

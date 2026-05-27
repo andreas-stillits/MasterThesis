@@ -142,10 +142,10 @@ class ScanningConfig(BaseModel):
 
     transport_min: float = 0.01
     transport_max: float = 100.0
-    transport_num: int = 2
+    transport_num: int = 9
     absorption_min: float = 0.01
     absorption_max: float = 100.0
-    absorption_num: int = 2
+    absorption_num: int = 9
     compensation: float = 0.1
 
 
