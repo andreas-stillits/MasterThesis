@@ -203,6 +203,14 @@ class SamplePaths(PathsBase):
                 self.root / "diffusion", f"diffusion_{specifier:{self.format}}"
             )
 
+    def neumann(self, specifier: int | None = None) -> DiffusionPaths:
+        if specifier is None:
+            return DiffusionPaths(self.root.ensure(), "neumann")
+        elif isinstance(specifier, int):
+            return DiffusionPaths(
+                self.root / "neumann", f"neumann_{specifier:{self.format}}"
+            )
+
     def scanning(self, specifier: int | None = None) -> ScanningPaths:
         if specifier is None:
             return ScanningPaths(self.root.ensure(), "scanning")
