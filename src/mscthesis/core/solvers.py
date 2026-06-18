@@ -229,9 +229,9 @@ class PhotoactiveSolver(BaseSolver):
 
         a = ufl.inner(ufl.grad(chi), ufl.grad(v)) * self.dx(
             self.tags.AIRSPACE
-        ) + self.surface_coeff * chi * v * self.ds(
+        ) + self.surface_coeff * chi * v * self.ds(  # type: ignore
             self.tags.MESOPHYLL
-        )  # type: ignore
+        )
         L = self.surface_coeff * self.compensation * v * self.ds(self.tags.MESOPHYLL)  # type: ignore
 
         bc_inlet = fem.dirichletbc(self.chii, self.inlet_dofs, self.functionspace)
@@ -292,6 +292,45 @@ class DiffusionSolver(BaseSolver):
     ) -> tuple[fem.Function, dict[str, Any]]:
         self.chii.value = default_scalar_type(chii)
         self.chit.value = default_scalar_type(chit)
+        solution = self.problem.solve()
+        gradient = self.compute_gradient(solution)
+        return solution, self.analyze(solution, gradient)
+
+
+class NeumannSolver(BaseSolver):
+    def __init__(self, solver_ctx: SolverContext, mesh_ctx: MeshContext) -> None:
+        super().__init__(solver_ctx, mesh_ctx)
+        #
+        chi = ufl.TrialFunction(self.functionspace)
+        v = ufl.TestFunction(self.functionspace)
+
+        a = ufl.inner(ufl.grad(chi), ufl.grad(v)) * self.dx(self.tags.AIRSPACE)
+        L = (
+            fem.Constant(
+                self.mesh_ctx.mesh,
+                default_scalar_type(1 / self.mesophyll_area),  # type: ignore
+            )
+            * v
+            * self.ds(self.tags.MESOPHYLL)
+        )
+
+        bc_inlet = fem.dirichletbc(self.chii, self.inlet_dofs, self.functionspace)
+
+        self.problem = LinearProblem(
+            a,
+            L,  # type: ignore
+            bcs=[
+                bc_inlet,
+            ],
+            petsc_options=self.solver_ctx.petsc_options,
+        )
+        return
+
+    def solve_for(
+        self,
+        chii: float,
+    ) -> tuple[fem.Function, dict[str, Any]]:
+        self.chii.value = default_scalar_type(chii)
         solution = self.problem.solve()
         gradient = self.compute_gradient(solution)
         return solution, self.analyze(solution, gradient)
