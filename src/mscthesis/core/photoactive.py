@@ -22,8 +22,10 @@ def derive_summary(df: pd.DataFrame) -> pd.DataFrame:
     summary["mesophyll_variation"] = (
         np.sqrt(summary["mesophyll_var"]) / summary["mesophyll_mean"]
     )
-    summary["airspace_variation"] = (
-        np.sqrt(summary["airspace_var"]) / summary["airspace_mean"]
+
+    summary["consistency"] = summary["mesophyll_var"] / (
+        (1 - summary["mesophyll_mean"])
+        * (summary["mesophyll_mean"] - summary["compensation"])
     )
 
     # filter the dataframe for clarity
@@ -37,12 +39,9 @@ def derive_summary(df: pd.DataFrame) -> pd.DataFrame:
             "substomatal_mean",
             "mesophyll_mean",
             "mesophyll_variation",
-            "airspace_mean",
-            "airspace_variation",
             "assimilation_rate",
-            "assimilation_substomatal",
-            "assimilation_mesophyll_mean",
             "resistance_m",
+            "consistency",
             "stomatal_area_fraction",
             "mesophyll_area_fraction",
             "plug_area",

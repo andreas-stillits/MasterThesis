@@ -34,48 +34,109 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
             sample_paths.synthesis.geometry.require().read_text(encoding="utf-8")
         )
 
+        tortuosity: float = geo["surfaces"]["tortuosity_factor"]
+        lateral: float = geo["surfaces"]["lateral_lengthening"]
+
         for specifier in config.search.stomatal_aspect_set:
+
+            content: dict[str, Any] = {
+                "type": synthesis_type,
+                "sample_id": sample_id,
+                "specifier": specifier,
+            }
+
+            # extract from diffusion, neumann, and dirichlet
             diffusion_paths = sample_paths.diffusion(specifier)
 
             if diffusion_paths.manifest.exists():
-                content: dict[str, Any] = {
-                    "sample_id": sample_id,
-                    "synthesis_type": synthesis_type,
-                    "target_plug_aspect": target_plug_aspect,
-                    "specifier": specifier,
-                    "solver": "diffusion",
-                    "surface_tortuosity_factor": geo["surfaces"]["tortuosity_factor"],
-                    "surface_lateral": geo["surfaces"]["lateral_lengthening"],
-                    "surface_post_average": geo["surfaces"]["post_average"],
-                    "top_tortuosity_factor": geo["top"]["tortuosity_factor"],
-                    "top_lateral": geo["top"]["lateral_lengthening"],
-                    "top_post_average": geo["top"]["post_average"],
-                }
-                plug_aspect, stomatal_aspect = fetch_from_manifest(
-                    sample_paths.meshing(specifier).manifest.require(),
-                    "plug_aspect",
-                    "stomatal_aspect",
+                (
+                    plug_area,
+                    stomatal_area,
+                    porosity,
+                    surface_centroid,
+                    substomatal_mean,
+                    top_mean,
+                    mesophyll_mean,
+                    top_flux_grad,
+                ) = fetch_from_manifest(
+                    diffusion_paths.manifest.require(),
+                    "plug_area",
+                    "stomatal_area",
+                    "porosity",
+                    "surface_centroid",
+                    "substomatal_mean",
+                    "top_mean",
+                    "mesophyll_mean",
+                    "top_flux_grad",
                 )
-                content["plug_aspect"] = plug_aspect
-                content["stomatal_aspect"] = stomatal_aspect
-
-                with open(diffusion_paths.manifest.path) as file:
-                    manifest = json.load(file)
-                    meta = manifest.get("meta", {})
-                    del meta["parameters"]
-                    content.update(meta)
-                index.append(content)
-            #
+                content["plug_aspect"] = np.sqrt(plug_area / np.pi)
+                content["stomatal_aspect"] = np.sqrt(stomatal_area / np.pi)
+                content["r_widening"] = (
+                    0.75
+                    * content["plug_aspect"]
+                    * (content["plug_aspect"] / content["stomatal_aspect"] - 1)
+                    if content["stomatal_aspect"] < 0.95 * content["plug_aspect"]
+                    else 0.0
+                )
+                content["tomas"] = tortuosity / porosity / 2
+                content["earles"] = tortuosity * lateral / porosity / 2
+                content["surface_centroid"] = surface_centroid
+                content["r_porous_top"] = np.abs(
+                    (substomatal_mean - top_mean) / (top_flux_grad / plug_area)
+                )
+                content["r_porous_mean"] = np.abs(
+                    (substomatal_mean - mesophyll_mean) / (top_flux_grad / plug_area)
+                )
             else:
-                continue
+                raise FileNotFoundError(
+                    f"Diffusion manifest not found for sample {sample_id} specifier {specifier}"
+                )
+
+            dirichlet_paths = sample_paths.dirichlet(specifier)
+
+            if dirichlet_paths.manifest.exists():
+                substomatal_mean, mesophyll_mean, mesophyll_flux_grad = (
+                    fetch_from_manifest(
+                        dirichlet_paths.manifest.require(),
+                        "substomatal_mean",
+                        "mesophyll_mean",
+                        "mesophyll_flux_grad",
+                    )
+                )
+                content["r_dirichlet"] = np.abs(
+                    (substomatal_mean - mesophyll_mean)
+                    / (mesophyll_flux_grad / plug_area)
+                )
+            else:
+                raise FileNotFoundError(
+                    f"Dirichlet manifest not found for sample {sample_id} specifier {specifier}"
+                )
+
+            neumann_paths = sample_paths.neumann(specifier)
+
+            if neumann_paths.manifest.exists():
+                substomatal_mean, mesophyll_mean, mesophyll_flux_grad = (
+                    fetch_from_manifest(
+                        neumann_paths.manifest.require(),
+                        "substomatal_mean",
+                        "mesophyll_mean",
+                        "mesophyll_flux_grad",
+                    )
+                )
+                content["r_neumann"] = np.abs(
+                    (substomatal_mean - mesophyll_mean)
+                    / (mesophyll_flux_grad / plug_area)
+                )
+            else:
+                raise FileNotFoundError(
+                    f"Neumann manifest not found for sample {sample_id} specifier {specifier}"
+                )
+
+            index.append(content)
 
     df = pd.DataFrame(index)
     df.reset_index(drop=True, inplace=True)
     save_dataframe(paths.diffusion_index.path, df)
-
-    #
-    summary = derive_summary(df)
-    save_dataframe(paths.diffusion_summary.path, summary)
 
     return
 
