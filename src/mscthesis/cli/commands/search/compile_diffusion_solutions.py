@@ -8,7 +8,6 @@ import numpy as np
 import pandas as pd
 
 from ....config import ProjectConfig
-from ....core.diffusion import derive_summary
 from ....core.io import save_dataframe
 from ....manifest import fetch_from_manifest
 from ....paths import ProjectPaths
@@ -71,8 +70,9 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
                 )
                 content["plug_aspect"] = np.sqrt(plug_area / np.pi)
                 content["stomatal_aspect"] = np.sqrt(stomatal_area / np.pi)
-                content["r_widening"] = (
-                    0.75
+                content["r_empty_calc"] = 1.0 + (
+                    np.pi
+                    / 4
                     * content["plug_aspect"]
                     * (content["plug_aspect"] / content["stomatal_aspect"] - 1)
                     if content["stomatal_aspect"] < 0.95 * content["plug_aspect"]
@@ -132,9 +132,37 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
                     f"Neumann manifest not found for sample {sample_id} specifier {specifier}"
                 )
 
+            empty_paths = sample_paths.empty(specifier)
+
+            if empty_paths.manifest.exists():
+                substomatal_mean, top_mean, top_flux_grad = fetch_from_manifest(
+                    empty_paths.manifest.require(),
+                    "substomatal_mean",
+                    "top_mean",
+                    "top_flux_grad",
+                )
+                content["r_empty"] = np.abs(
+                    (substomatal_mean - top_mean) / (top_flux_grad / plug_area)
+                )
+            else:
+                raise FileNotFoundError(
+                    f"Empty manifest not found for sample {sample_id} specifier {specifier}"
+                )
+
             index.append(content)
 
     df = pd.DataFrame(index)
+    df.reset_index(drop=True, inplace=True)
+
+    sample_ids = df["sample_id"].unique()
+    for sample_id in sample_ids:
+        specifier_0 = df[(df["sample_id"] == sample_id) & (df["specifier"] == 0)]
+        if not specifier_0.empty:
+            r_porous_top = specifier_0["r_porous_top"].values[0]
+            r_porous_mean = specifier_0["r_porous_mean"].values[0]
+            df.loc[df["sample_id"] == sample_id, "r_porous_top_0"] = r_porous_top
+            df.loc[df["sample_id"] == sample_id, "r_porous_mean_0"] = r_porous_mean
+
     df.reset_index(drop=True, inplace=True)
     save_dataframe(paths.diffusion_index.path, df)
 

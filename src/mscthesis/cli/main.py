@@ -27,6 +27,7 @@ from .commands.search import (
     delete_selected,
     diffusion_solve_selected,
     dirichlet_solve_selected,
+    empty_solve_selected,
     gen_candidates_contrast,
     gen_candidates_metaballs,
     gen_candidates_mixed,
@@ -161,6 +162,7 @@ def _build_parser() -> argparse.ArgumentParser:
     diffusion_solve_selected.add_parser(search_subparsers)
     neumann_solve_selected.add_parser(search_subparsers)
     dirichlet_solve_selected.add_parser(search_subparsers)
+    empty_solve_selected.add_parser(search_subparsers)
     compile_diffusion_solutions.add_parser(search_subparsers)
     photoactive_scan_selected.add_parser(search_subparsers)
     compile_photoactive_scans.add_parser(search_subparsers)

@@ -219,6 +219,14 @@ class SamplePaths(PathsBase):
                 self.root / "dirichlet", f"dirichlet_{specifier:{self.format}}"
             )
 
+    def empty(self, specifier: int | None = None) -> DiffusionPaths:
+        if specifier is None:
+            return DiffusionPaths(self.root.ensure(), "empty")
+        elif isinstance(specifier, int):
+            return DiffusionPaths(
+                self.root / "empty", f"empty_{specifier:{self.format}}"
+            )
+
     def scanning(self, specifier: int | None = None) -> ScanningPaths:
         if specifier is None:
             return ScanningPaths(self.root.ensure(), "scanning")
@@ -275,6 +283,10 @@ class ProjectPaths(PathsBase):
     @path_field(kind="dir")
     def results(self) -> Path:
         return self.base / "results"
+
+    @path_field(kind="dir")
+    def empty(self) -> Path:
+        return self.base / "empty"
 
     @path_field(kind="file")
     def index(self) -> Path:
