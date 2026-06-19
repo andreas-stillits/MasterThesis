@@ -10,7 +10,7 @@ from mscthesis.core.io import load_dataframe
 from ....config import ProjectConfig, save_config
 from ....core.io import load_volumetric_mesh, save_fem_solution
 from ....core.solvers import (
-    DiffusionSolver,
+    DirichletSolver,
     MeshContext,
     SolverContext,
 )
@@ -35,7 +35,7 @@ def execute_solving(sample_id: str) -> None:
     sample_paths = paths.selected_sample(sample_id)
 
     for specifier in config.search.stomatal_aspect_set:
-        diffusion_paths = sample_paths.diffusion(specifier)
+        diffusion_paths = sample_paths.dirichlet(specifier)
         diffusion_paths.root.ensure()
 
         if not diffusion_paths.solution.exists() or force:
@@ -44,7 +44,7 @@ def execute_solving(sample_id: str) -> None:
                 sample_paths.meshing(specifier).mesh.require()
             )
 
-            solver = DiffusionSolver(
+            solver = DirichletSolver(
                 SolverContext(**config.solver_ctx.model_dump()),
                 mesh_ctx,
             )
@@ -59,7 +59,7 @@ def execute_solving(sample_id: str) -> None:
             )
             dump_manifest(
                 diffusion_paths.manifest.path,
-                command_name="diffusion-solve-selected",
+                command_name="dirichlet-solve-selected",
                 sample_id=sample_id,
                 inputs={"mesh": sample_paths.meshing(specifier).mesh.path},
                 outputs={"solution": diffusion_paths.solution.path},
@@ -115,7 +115,7 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
 
 def add_parser(subparsers: argparse._SubParsersAction) -> None:
     parser = subparsers.add_parser(
-        "diffusion-solve-selected",
+        "dirichlet-solve-selected",
         help="Solve the diffusion problem for the selected samples.",
     )
     parser.add_argument(

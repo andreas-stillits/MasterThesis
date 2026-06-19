@@ -10,8 +10,8 @@ from mscthesis.core.io import load_dataframe
 from ....config import ProjectConfig, save_config
 from ....core.io import load_volumetric_mesh, save_fem_solution
 from ....core.solvers import (
-    DiffusionSolver,
     MeshContext,
+    NeumannSolver,
     SolverContext,
 )
 from ....manifest import dump_manifest
@@ -35,7 +35,7 @@ def execute_solving(sample_id: str) -> None:
     sample_paths = paths.selected_sample(sample_id)
 
     for specifier in config.search.stomatal_aspect_set:
-        diffusion_paths = sample_paths.diffusion(specifier)
+        diffusion_paths = sample_paths.neumann(specifier)
         diffusion_paths.root.ensure()
 
         if not diffusion_paths.solution.exists() or force:
@@ -44,27 +44,25 @@ def execute_solving(sample_id: str) -> None:
                 sample_paths.meshing(specifier).mesh.require()
             )
 
-            solver = DiffusionSolver(
+            solver = NeumannSolver(
                 SolverContext(**config.solver_ctx.model_dump()),
                 mesh_ctx,
             )
-            solution, analysis = solver.solve_for(*config.solve_diffusion.parameters)
+            solution, analysis = solver.solve_for(0.0)
 
             save_fem_solution(diffusion_paths.solution.path, solution, mesh_ctx)
             save_config(
                 diffusion_paths.config.path,
                 config,
-                "solve_diffusion",
                 "solver_ctx",
             )
             dump_manifest(
                 diffusion_paths.manifest.path,
-                command_name="diffusion-solve-selected",
+                command_name="neumann-solve-selected",
                 sample_id=sample_id,
                 inputs={"mesh": sample_paths.meshing(specifier).mesh.path},
                 outputs={"solution": diffusion_paths.solution.path},
                 metadata={
-                    "parameters": config.solve_diffusion.parameters,
                     **analysis,
                 },
                 tool_version=config.meta.project_version,
@@ -115,8 +113,8 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
 
 def add_parser(subparsers: argparse._SubParsersAction) -> None:
     parser = subparsers.add_parser(
-        "diffusion-solve-selected",
-        help="Solve the diffusion problem for the selected samples.",
+        "neumann-solve-selected",
+        help="Solve the neumann problem for the selected samples.",
     )
     parser.add_argument(
         "-f",

@@ -211,6 +211,14 @@ class SamplePaths(PathsBase):
                 self.root / "neumann", f"neumann_{specifier:{self.format}}"
             )
 
+    def dirichlet(self, specifier: int | None = None) -> DiffusionPaths:
+        if specifier is None:
+            return DiffusionPaths(self.root.ensure(), "dirichlet")
+        elif isinstance(specifier, int):
+            return DiffusionPaths(
+                self.root / "dirichlet", f"dirichlet_{specifier:{self.format}}"
+            )
+
     def scanning(self, specifier: int | None = None) -> ScanningPaths:
         if specifier is None:
             return ScanningPaths(self.root.ensure(), "scanning")

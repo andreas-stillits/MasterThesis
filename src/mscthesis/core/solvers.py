@@ -64,6 +64,11 @@ class BaseSolver:
         self.top_dofs = fem.locate_dofs_topological(
             self.functionspace, self.mesh_ctx.fdim, top_facets
         )
+        mesophyll_facets = self.mesh_ctx.facet_tags.find(self.tags.MESOPHYLL)
+        self.mesophyll_dofs = fem.locate_dofs_topological(
+            self.functionspace, self.mesh_ctx.fdim, mesophyll_facets
+        )
+
         self.dx = ufl.Measure(
             "dx",
             domain=self.mesh_ctx.mesh,
@@ -283,6 +288,43 @@ class DiffusionSolver(BaseSolver):
             a,
             L,
             bcs=[bc_inlet, bc_top],
+            petsc_options=self.solver_ctx.petsc_options,
+        )
+        return
+
+    def solve_for(
+        self, chii: float, chit: float
+    ) -> tuple[fem.Function, dict[str, Any]]:
+        self.chii.value = default_scalar_type(chii)
+        self.chit.value = default_scalar_type(chit)
+        solution = self.problem.solve()
+        gradient = self.compute_gradient(solution)
+        return solution, self.analyze(solution, gradient)
+
+
+class DirichletSolver(BaseSolver):
+    def __init__(self, solver_ctx: SolverContext, mesh_ctx: MeshContext) -> None:
+        super().__init__(solver_ctx, mesh_ctx)
+        #
+        chi = ufl.TrialFunction(self.functionspace)
+        v = ufl.TestFunction(self.functionspace)
+
+        a = ufl.inner(ufl.grad(chi), ufl.grad(v)) * self.dx(self.tags.AIRSPACE)
+        L = (
+            fem.Constant(self.mesh_ctx.mesh, default_scalar_type(0.0))  # type: ignore
+            * v
+            * self.dx(self.tags.AIRSPACE)
+        )
+
+        bc_inlet = fem.dirichletbc(self.chii, self.inlet_dofs, self.functionspace)
+        bc_mesophyll = fem.dirichletbc(
+            self.chit, self.mesophyll_dofs, self.functionspace
+        )
+
+        self.problem = LinearProblem(
+            a,
+            L,
+            bcs=[bc_inlet, bc_mesophyll],
             petsc_options=self.solver_ctx.petsc_options,
         )
         return
