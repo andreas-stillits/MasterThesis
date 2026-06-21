@@ -158,9 +158,9 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
     for sample_id in sample_ids:
         specifier_0 = df[(df["sample_id"] == sample_id) & (df["specifier"] == 0)]
         if not specifier_0.empty:
-            r_porous_top = specifier_0["r_porous_top"].values[0]
             r_porous_mean = specifier_0["r_porous_mean"].values[0]
-            df.loc[df["sample_id"] == sample_id, "r_porous_top_0"] = r_porous_top
+            r_neumann = specifier_0["r_neumann"].values[0]
+            df.loc[df["sample_id"] == sample_id, "r_neumann_0"] = r_neumann
             df.loc[df["sample_id"] == sample_id, "r_porous_mean_0"] = r_porous_mean
 
     df.reset_index(drop=True, inplace=True)

@@ -1,8 +1,7 @@
 tmp/
 .vscode/
 .treasury/
-.backup/
 .final/
-.testing/
+.phasespace/
 **/*.egg-info/
 **/__pycache__/ 

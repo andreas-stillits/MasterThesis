@@ -14,7 +14,7 @@ def derive_summary(df: pd.DataFrame) -> pd.DataFrame:
     summary["assimilation_rate"] = np.abs(
         summary["mesophyll_flux_sol"] / summary["plug_area"]
     )
-    summary["resistance_m"] = (
+    summary["resistance_active"] = (
         summary["substomatal_mean"] - summary["mesophyll_mean"]
     ) / summary["assimilation_rate"]
 
@@ -40,11 +40,10 @@ def derive_summary(df: pd.DataFrame) -> pd.DataFrame:
             "mesophyll_mean",
             "mesophyll_variation",
             "assimilation_rate",
-            "resistance_m",
+            "resistance_active",
             "consistency",
-            "stomatal_area_fraction",
             "mesophyll_area_fraction",
-            "plug_area",
+            "porosity",
         ]
     ]
 

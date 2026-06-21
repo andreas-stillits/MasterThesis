@@ -15,16 +15,24 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
     paths = ProjectPaths(config.behavior.storage_root)
     paths.selected.ensure()
 
-    diff = load_dataframe(paths.diffusion_summary.require())
+    diff = load_dataframe(paths.diffusion_index.require())
     photo = load_dataframe(paths.photoactive_summary.require())
 
     sample_ids = photo["sample_id"].unique()
     specifiers = photo["specifier"].unique()
 
     collection = photo.copy()
-    collection["diffusive_resistance_m"] = np.nan
-    collection["diffusive_pipe_resistance_m"] = np.nan
-    collection["diffusive_inlet_resistance"] = np.nan
+    keys = [
+        "plug_aspect",
+        "stomatal_aspect",
+        "r_porous_mean",
+        "r_neumann",
+        "r_empty",
+        "r_porous_mean_0",
+        "r_neumann_0",
+    ]
+    for key in keys:
+        collection[key] = np.nan
 
     # collection has multiple rows for each sample_id and specifier pair
     # I want to fill the diffusive columns for each sample_id and specifier pair with the corresponding values from diff
@@ -40,15 +48,8 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
             if not mask_diff.any():
                 continue
 
-            collection.loc[mask_photo, "diffusive_resistance_m"] = diff.loc[
-                mask_diff, "resistance_m"
-            ].values[0]
-            collection.loc[mask_photo, "diffusive_pipe_resistance_m"] = diff.loc[
-                mask_diff, "pipe_resistance_m"
-            ].values[0]
-            collection.loc[mask_photo, "diffusive_inlet_resistance"] = diff.loc[
-                mask_diff, "inlet_resistance"
-            ].values[0]
+            for key in keys:
+                collection.loc[mask_photo, key] = diff.loc[mask_diff, key].values[0]
 
     collection.dropna(inplace=True)
 

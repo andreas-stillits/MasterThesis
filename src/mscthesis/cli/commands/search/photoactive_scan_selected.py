@@ -14,7 +14,6 @@ from ....core.io import (
     load_dataframe,
     load_volumetric_mesh,
     save_dataframe,
-    save_fem_solution,
 )
 from ....core.solvers import (
     MeshContext,
