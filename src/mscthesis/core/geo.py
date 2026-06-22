@@ -142,9 +142,10 @@ def compute_for_targets(
         euclid_dist = euclid_from_start[idx]
         tortuosity = geo_dist / euclid_dist if euclid_dist > 0 else np.nan
         tortuosities[i] = tortuosity
-        lateral_lengthening[i] = point[2] / euclid_dist if euclid_dist > 0 else np.nan
-    tortuosities = tortuosities[~np.isnan(tortuosities)]
-    lateral_lengthening = lateral_lengthening[~np.isnan(lateral_lengthening)]
+        lateral_lengthening[i] = euclid_dist / point[2] if point[2] > 0 else np.nan
+    mask = (~np.isnan(tortuosities)) & (~np.isnan(lateral_lengthening))
+    tortuosities = tortuosities[mask]
+    lateral_lengthening = lateral_lengthening[mask]
     return tortuosities, lateral_lengthening
 
 

@@ -57,6 +57,7 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
                     top_mean,
                     mesophyll_mean,
                     top_flux_grad,
+                    mesophyll_area_fraction,
                 ) = fetch_from_manifest(
                     diffusion_paths.manifest.require(),
                     "plug_area",
@@ -67,7 +68,9 @@ def _cmd(config: ProjectConfig, args: argparse.Namespace) -> None:
                     "top_mean",
                     "mesophyll_mean",
                     "top_flux_grad",
+                    "mesophyll_area_fraction",
                 )
+                content["mesophyll_area_fraction"] = mesophyll_area_fraction
                 content["plug_aspect"] = np.sqrt(plug_area / np.pi)
                 content["stomatal_aspect"] = np.sqrt(stomatal_area / np.pi)
                 content["r_empty_calc"] = 1.0 + (
